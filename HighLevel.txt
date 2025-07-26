@@ -1,0 +1,174 @@
+---------------------------------
+✅ INFRASTRUCTURE SETUP PLAN (Supports All 7 MLOps Principles)
+STEP 1: EC2 INSTANCE (MLOps Core Node)
+	Launch t3.large, Ubuntu 22.04
+	Name: mlops-core
+	IAM Role: Full access to S3, ECR, SageMaker, SecretsManager, CloudWatch
+	Open Ports:
+		5000 → MLflow
+		3000 → Grafana
+		9090 → Prometheus
+		8000 → FastAPI app
+	Storage: 30 GB
+	Inbound: SSH, Custom TCP for above ports (open only to your IP)
+STEP 2: BOOTSTRAP EC2 (Install Core Stack)
+	Install:
+		Docker
+		Docker Compose
+		Python 3 + pip + virtualenv
+		Git
+		MLflow (tracking server)
+		Prometheus + Grafana
+		Redis
+		AWS CLI
+
+STEP 3: S3 BUCKET SETUP
+		Create bucket: mlops-fraud-dev
+		Enable versioning
+		Structure:
+			/data/raw/
+			/data/processed/
+			/models/
+			/monitoring/
+			/drift_reports/
+			/explanations/
+STEP 4: ECR SETUP
+	Create ECR repos:
+		fraud-train
+		fraud-serve
+		Used for:
+			Docker image for training (train.py)
+			Docker image for serving (predict.py)
+STEP 5: SECRETS MANAGER
+	Store:
+		OpenAI API key (for GenAI later)
+		Redis connection strings (if secured)
+		Any DB/API secrets
+STEP 6: MLflow Tracking Setup
+		Run MLflow server:
+		Backend: SQLite (or Postgres later)
+		Artifact store: S3 bucket
+		Accessible at http://<ec2-ip>:5000
+		“SHAP summary plots and feature impact logs from training are logged to MLflow as artifacts.”
+
+
+STEP 7: Prometheus + Grafana Setup
+		Prometheus scrapes:		
+			FastAPI custom metrics (latency, request count, etc.)
+			EC2 system metrics (via Node Exporter)
+			SageMaker logs via CloudWatch exporter (optional)
+			Grafana dashboards:
+			Model latency / throughput
+			Drift metrics
+			Prediction volumes
+		job_name: explain-endpoint
+		Monitor /explain route for latency, error count
+		Grafana Dashboard Additions:
+			“Model Explainability Latency” panel
+			“/explain error rate” panel (optional)
+-------------------------------------------------------------------------			
+✅ STEP 2: Project Skeleton Setup — MLOps-Platform/
+This step lays out the barebones modular repo structure that supports:
+	✅ All 7 MLOps principles
+	✅ Plug-and-play support for multiple modules (Fraud now, NLP later)
+	✅ Fast CI/CD and monitoring integration
+MLOps-Platform/
+├── terraform/
+│   ├── ec2.tf
+│   ├── s3.tf
+│   ├── ecr.tf
+│   ├── provider.tf
+│   ├── variables.tf
+│   └── outputs.tf
+├── modules/
+│   ├── fraud_detection/
+│   │   ├── src/
+│   │   │   ├── router/
+│   │   │   │   └── traffic_split.py       ← Canary / A/B router
+│   │   │   ├── data/
+│   │   │   │   ├── load_data.py
+│   │   │   ├── features/
+│   │   │   │   ├── build_features.py
+│   │   │   │   └── feature_store.py       ← FG save/load logic
+│   │   │   ├── models/
+│   │   │   │   ├── base_model.py
+│   │   │   │   ├── logreg.py
+│   │   │   │   ├── xgb.py
+│   │   │   │   └── evaluate.py  			← UPDATED: log SHAP summary (optional)
+│   │   │   ├── utils/
+│   │   │   │   ├── logger.py
+│   │   │   │   └── metrics.py
+│   │   │   ├── validation/
+│   │   │   │   ├── data_validation.py     ← Schema + nulls + range check
+│   │   │   │   └── transform.py           ← Modular cleaning logic
+│   │   │   ├── explainability/               ← ✅ NEW
+│   │   │   │   ├── shap_explainer.py         ← SHAP logic here
+│   │   │   │   └── log_explanations.py       ← Optional: log to MLflow
+│   │   ├── config/
+│   │   │   └── config.yaml
+│   │   ├── train.py                       ← UPDATED: call SHAP + log global summary
+│   │   ├── run_pipeline.py                ← Calls all phases modularly
+│   │   ├── predict.py					   ← UPDATED: preload SHAP explainer (optional)
+│   │   ├── retrain.py                     ← Re-run pipeline with drifted data
+│   │   ├── Dockerfile
+│   │   ├── explain.py                     ← ✅ NEW: FastAPI route for /explain
+│   │   └── requirements.txt               ← UPDATED: add shap, matplotlib
+│   └── complaint_triage/
+│       └── README.md                      ← Placeholder
+├── infra/
+│   ├── start_sagemaker_training.py
+│   ├── ecr_push.sh
+│   └── deploy_endpoint.sh
+│   └── README.md                          ← UPDATED: interpretability support note
+├── monitoring/
+│   ├── drift_check.py                     ← PSI / feature stats / target drift
+│   ├── prometheus_metrics.py             ← FastAPI metrics logger;track /explain latency + errors
+│   ├── drift_report_scheduler.py         ← Optional daily drift check trigger
+│   └── grafana_dashboards/
+│       └── latency_drift_dashboard.json
+│       └── explainability_latency_panel.json ← ✅ NEW (optional panel)
+├── scripts/
+│   └── promote_model.py              ← Promote MLflow model to Production
+├── tests/
+│   ├── test_train.py
+│   ├── test_predict.py
+│   └── test_data_validation.py      ← Test coverage + CI hook
+├── .env.template                     ← Sample config with MLflow URI, Redis URL, etc.
+├── notebooks/                        ← (Optional) basic EDA for fraud
+│   └── fraud_eda.ipynb
+├── .github/
+│   └── workflows/
+│       └── train.yml                      ← CI: lint, Docker, ECR, optional SageMaker
+└── README.md
+-----------------------------------------------------
+Target in 3 days:
+✅ Day 1: Infra + Dev Stack
+	EC2 setup complete, MLflow running
+	S3 + ECR + IAM + Secrets wired
+	Project skeleton scaffolded (done ✅)
+	MLflow logs working from train.py
+	Dockerized trainer pushed to ECR
+✅ Day 2: Full MLOps Loop (Fraud)
+	run_pipeline.py runs: data → features → model → evaluate → MLflow log
+	predict.py serves live model via FastAPI
+	Redis cache wired
+	Prometheus logs live inference metrics
+	Drift detection stub in place
+✅ Day 3: Retraining + Monitoring
+	retrain.py works end-to-end
+	Drift check + feature group snapshot working
+	Manual deploy to SageMaker endpoint
+	CI flow (Docker + train job trigger) working
+	Grafana dashboards online
+	
+	
+---------------------------------------
+Perfect — that saves serious time. You’ll just drop in:
+
+✅ predict.py FastAPI app as the Kinesis stream processor
+
+✅ prometheus_metrics.py to expose latency, cache hits, etc.
+
+✅ Connect Lambda → call predict.py or SageMaker endpoint
+
+✅ Use SNS/SQS for alerts on drift or latency violations

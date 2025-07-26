@@ -1,0 +1,76 @@
+ssh -i C:\Users\vjs\Desktop\AWS\jp-ec2-key.pem ubuntu@3.215.110.164
+
+What i did so far:
+| Step        | What You Did                              | Why It Matters                                           |
+| ----------- | ----------------------------------------- | -------------------------------------------------------- |
+| EC2 launch  | Created `mlops-core` EC2 on AWS           | Your own always-on Linux box to host the infra           |
+| IAM role    | Attached `mlops-core-role`                | Gave instance full AWS access (S3, ECR, SageMaker, etc.) |
+| Ports setup | Opened 22, 5000, 3000, 9090, 8000         | Exposed services like MLflow, Grafana, FastAPI           |
+| Bootstrap   | Installed Docker, Python, pip, virtualenv | Core tools for building and running ML services          |
+| MLflow      | Installed + exposed on port 5000          | Tracks all your experiments and models                   |
+| Prometheus  | Installed + exposed on port 9090          | Scrapes and stores time-series metrics                   |
+| Grafana     | Installed + exposed on port 3000          | Visualizes Prometheus metrics                            |
+| Redis (WIP) | Tried apt, switching to manual build      | Needed for caching, pub/sub, async ML pipelines          |
+
+------------
+Q1. Why did we install Prometheus + Grafana instead of just printing metrics to logs?
+	Prometheus collects time-series metrics (CPU, memory, latency, model accuracy, etc.) every few seconds automatically.
+	Grafana lets you visualize trends, anomalies, and alerts in real-time from that data.
+	Logging just gives you raw events.
+
+Q2. Why did we install MLflow if we already have Prometheus and Grafana?
+	MLflow tracks model experiments — parameters, metrics, artifacts, and versions — so you can compare and reproduce them later.
+	It’s for model experimentation, not system monitoring
+	Prometheus tracks how your app performs.
+	MLflow tracks how your models perform during training.
+
+What are the 4 key components of MLflow? What does each do?
+How would you run an MLflow server in multi-user mode for a team?
+How do you log a model, its parameters, and custom metrics to MLflow from a training script?
+What is artifact_uri in MLflow, and why does it matter in cloud setups?
+How would you integrate MLflow with S3 as the backend store?
+What’s the difference between MLflow Tracking and MLflow Projects?
+Can MLflow track experiments for models trained outside Python (e.g., R, Java)? How?
+If you deploy multiple training jobs using Docker, how would you make sure they all log to the same MLflow backend?
+What is a “pull-based” metrics system? Why does Prometheus use pull instead of push?
+How do you expose custom metrics from a Python app for Prometheus to scrape?
+What happens if your Prometheus server goes down? How do you ensure metrics aren't lost?
+Explain the purpose of the job_name in prometheus.yml.
+How can you set up Prometheus to monitor CPU, memory, and disk usage on your EC2 box?
+What does the up metric represent in Prometheus?
+Prometheus stores metrics in a time-series DB. What is the default retention? How do you configure it?
+How do you connect Grafana to Prometheus?
+How can you create alerts in Grafana to trigger on custom ML metrics (like drift)?
+What is a “datasource” in Grafana? Can one dashboard use multiple?
+How do you secure Grafana UI access in a public EC2 environment?
+You want to embed a Grafana chart in an external dashboard. What needs to be configured?	
+What's the difference between installing with apt vs make?
+Your EC2 box must restart MLflow and Prometheus every reboot. What’s the right Linux-native way to do this?
+Why should you avoid 0.0.0.0/0 in security group rules for production?
+How would you persist logs for your services across reboots on EC2?
+Why is it important to assign an Elastic IP to your EC2 node?	
+What is Redis used for in ML pipelines? Give 2 distinct use cases.
+How would you use Redis to prevent duplicate requests hitting your FastAPI model server?
+What’s the difference between using Redis pub/sub vs Redis stream?	
+
+
+EC2 Setup:
+Launched t3.large instance with secure ports and full MLOps IAM access.
+
+SSH + System Bootstrap:
+Installed Docker, Git, Python, pip, virtualenv. Ready for infra apps.
+
+MLflow Installed & Live:
+Running on http://18.204.203.19:5000 — logs all model experiments.
+
+Prometheus Installed & Live:
+Runs at http://18.204.203.19:9090 — scrapes metrics (e.g., CPU, app stats).
+“Metric scraper that collects and stores time-series data from apps + infra.”
+
+
+Grafana Installed & Live:
+At http://18.204.203.19:3000 — visualizes Prometheus data with dashboards.
+“Dashboard UI that turns Prometheus data into live visual insights.”
+
+
+
