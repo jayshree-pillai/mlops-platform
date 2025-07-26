@@ -1,4 +1,4 @@
-ssh -i C:\Users\vjs\Desktop\AWS\jp-ec2-key.pem ubuntu@3.215.110.164
+
 
 What i did so far:
 | Step        | What You Did                              | Why It Matters                                           |
@@ -32,6 +32,7 @@ How would you integrate MLflow with S3 as the backend store?
 What’s the difference between MLflow Tracking and MLflow Projects?
 Can MLflow track experiments for models trained outside Python (e.g., R, Java)? How?
 If you deploy multiple training jobs using Docker, how would you make sure they all log to the same MLflow backend?
+
 What is a “pull-based” metrics system? Why does Prometheus use pull instead of push?
 How do you expose custom metrics from a Python app for Prometheus to scrape?
 What happens if your Prometheus server goes down? How do you ensure metrics aren't lost?
@@ -39,19 +40,35 @@ Explain the purpose of the job_name in prometheus.yml.
 How can you set up Prometheus to monitor CPU, memory, and disk usage on your EC2 box?
 What does the up metric represent in Prometheus?
 Prometheus stores metrics in a time-series DB. What is the default retention? How do you configure it?
+
 How do you connect Grafana to Prometheus?
 How can you create alerts in Grafana to trigger on custom ML metrics (like drift)?
 What is a “datasource” in Grafana? Can one dashboard use multiple?
 How do you secure Grafana UI access in a public EC2 environment?
 You want to embed a Grafana chart in an external dashboard. What needs to be configured?	
+
+
 What's the difference between installing with apt vs make?
 Your EC2 box must restart MLflow and Prometheus every reboot. What’s the right Linux-native way to do this?
 Why should you avoid 0.0.0.0/0 in security group rules for production?
 How would you persist logs for your services across reboots on EC2?
 Why is it important to assign an Elastic IP to your EC2 node?	
+
 What is Redis used for in ML pipelines? Give 2 distinct use cases.
 How would you use Redis to prevent duplicate requests hitting your FastAPI model server?
 What’s the difference between using Redis pub/sub vs Redis stream?	
+Why did we build Redis from source instead of using apt install?
+What risks or side effects come from running redis-server directly in the foreground?
+How would you configure Redis to start automatically when EC2 reboots?
+Give 2 real-world use cases of Redis in ML pipelines — one batch, one real-time.
+How would you use Redis to cache FastAPI inference results?
+You see PONG from redis-cli ping. How do you verify it's reachable from another container or host?
+Explain what vm.overcommit_memory = 1 warning means and why Redis complains about it.
+If your Redis crashes, how do you make sure it auto-restarts? Which Linux tool handles that?
+Redis is open on port 6379 — how do you lock it down to internal access only (no public access)?
+What’s the difference between Redis pub/sub and Redis queues (e.g., lists or streams) in ML system design?
+
+
 
 
 EC2 Setup:
@@ -71,6 +88,12 @@ Runs at http://18.204.203.19:9090 — scrapes metrics (e.g., CPU, app stats).
 Grafana Installed & Live:
 At http://18.204.203.19:3000 — visualizes Prometheus data with dashboards.
 “Dashboard UI that turns Prometheus data into live visual insights.”
+---------------------------------
+cd ~/mlops-core/redis-stable
+make
+sudo make install
+redis-server --version
+redis-cli ping
 
 
 

@@ -21,7 +21,7 @@ STEP 2: BOOTSTRAP EC2 (Install Core Stack)
 		Prometheus + Grafana
 		Redis
 		AWS CLI
-
+		Terraform
 STEP 3: S3 BUCKET SETUP
 		Create bucket: mlops-fraud-dev
 		Enable versioning
@@ -39,7 +39,8 @@ STEP 4: ECR SETUP
 		Used for:
 			Docker image for training (train.py)
 			Docker image for serving (predict.py)
-STEP 5: SECRETS MANAGER
+STEP 5: SECRETS MANAGER    * Skip Step 5 until:You add OpenAI GenAI code ;You lock Redis with a password
+You integrate DBs or external APIs
 	Store:
 		OpenAI API key (for GenAI later)
 		Redis connection strings (if secured)
