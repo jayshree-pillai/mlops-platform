@@ -33,4 +33,4 @@ save_parquet_to_s3(val_df, f"{PROCESSED_PREFIX}val.parquet")
 save_parquet_to_s3(test_df, f"{PROCESSED_PREFIX}test.parquet")
 save_parquet_to_s3(drift_df, f"{PROCESSED_PREFIX}drift_stream.parquet")
 
-print("✅ All splits saved to S3.")
+print("All splits saved to S3.")
