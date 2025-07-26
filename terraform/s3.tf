@@ -25,6 +25,7 @@ resource "aws_s3_bucket_public_access_block" "block_public" {
   restrict_public_buckets = true
 }
 
+
 # Optional: Predefined folder structure via dummy objects
 resource "aws_s3_object" "folders" {
   for_each = toset([
