@@ -3,6 +3,8 @@ import numpy as np
 import os
 import io
 import boto3
+import s3fs
+
 from pathlib import Path
 from feature_processor import FeatureProcessor
 
@@ -20,7 +22,7 @@ def upload_array(arr, s3_key):
 # Load parquet
 LOCAL_PARQUET = "data/processed"
 splits = {
-    split: pd.read_parquet(f"{LOCAL_PARQUET}/{split}.parquet")
+    split: pd.read_parquet(f"s3://mlops-fraud-dev/data/processed/{split}.parquet")
     for split in ["train", "val", "test"]
 }
 
