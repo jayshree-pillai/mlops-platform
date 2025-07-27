@@ -1,3 +1,7 @@
+import mlflow
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+mlflow.set_experiment("fraud_logreg")
+
 import sys, os
 sys.path.append(os.path.abspath("modules/fraud_detection/src"))
 
