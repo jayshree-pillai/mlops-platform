@@ -1,6 +1,6 @@
 from sklearn.linear_model import LogisticRegression
-from ..base_model import train_model
-from ...utils.s3_loader import load_npy_from_s3
+from models.base_model import train_model
+from utils.s3_loader import load_npy_from_s3
 
 # --- Load data ---
 X_train = load_npy_from_s3("train_X.npy")
