@@ -26,7 +26,7 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         ])
 
         cat_pipeline = Pipeline([
-            ('onehot', OneHotEncoder(handle_unknown='ignore', sparse=False))
+            ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
         ])
 
         self.pipeline = ColumnTransformer([
