@@ -53,3 +53,19 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
     @staticmethod
     def load(path):
         return joblib.load(path)
+
+    def dump_schema(self, path: str):
+        schema = {
+            "feature_columns": self.feature_columns,
+            "transformers": str(self.pipeline)
+        }
+        with open(path, "w") as f:
+            json.dump(schema, f, indent=2)
+
+    def hash_schema(self) -> str:
+        schema = {
+            "feature_columns": self.feature_columns,
+            "transformers": str(self.pipeline)
+        }
+        schema_str = json.dumps(schema, sort_keys=True)
+        return hashlib.sha256(schema_str.encode()).hexdigest()

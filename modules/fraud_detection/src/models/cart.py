@@ -20,8 +20,8 @@ y_val = load_npy_from_s3("val_y.npy")
 print("Starting CART training...")  # add at top
 # --- Hyperparameter tuning ---
 param_grid = {
-    "max_depth": [5 ], #, 10, 20],
-    "min_samples_split": [2]#, 10, 50]
+    "max_depth": [5, 10, 20],
+    "min_samples_split": [2, 10, 50]
 }
 grid = GridSearchCV(DecisionTreeClassifier(), param_grid, cv=3, scoring='roc_auc')
 print("GridSearchCV fitting...")    # before grid.fit

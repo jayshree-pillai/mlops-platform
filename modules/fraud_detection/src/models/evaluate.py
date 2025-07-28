@@ -1,7 +1,8 @@
 import mlflow
 from sklearn.metrics import classification_report, roc_auc_score
 import joblib
-
+import shap
+import matplotlib.pyplot as plt
 
 def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manual"):
     with mlflow.start_run():
@@ -24,6 +25,15 @@ def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manu
         report_path = f"{model_name}_report.txt"
         with open(report_path, "w") as f:
             f.write(report_txt)
+
+        # SHAP explainability
+        explainer = shap.Explainer(model, X_val)
+        shap_values = explainer(X_val)
+
+        shap.summary_plot(shap_values, X_val, show=False)
+        summary_path = f"{model_name}_shap_summary.png"
+        plt.savefig(summary_path)
+        
         mlflow.log_artifact(report_path,artifact_path =model_name)
 
         mlflow.sklearn.log_model(model,artifact_path = model_name)

@@ -19,7 +19,7 @@ print("Starting XGB training...")
 
 param_grid = {
     "n_estimators": [100],#, 200],
-    "max_depth": [5],#, 10],
+    "max_depth": [5 ],# 10],
     "learning_rate": [0.05]#, 0.1]
 }
 grid = GridSearchCV(XGBClassifier(n_jobs=-1, use_label_encoder=False, eval_metric="auc"), param_grid, cv=3, scoring='roc_auc')
