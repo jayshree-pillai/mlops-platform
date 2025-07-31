@@ -38,6 +38,8 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         self.build_pipeline()
         X_proc = X[self.feature_columns].copy()
         self.pipeline.fit(X_proc)
+        self.schema_hash_value = self.hash_schema()
+
         return self
 
     def transform(self, X):
@@ -49,6 +51,10 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
 
     def save(self, path):
         joblib.dump(self, path)
+
+    @property
+    def schema_hash(self):
+        return self.schema_hash_value
 
     @staticmethod
     def load(path):

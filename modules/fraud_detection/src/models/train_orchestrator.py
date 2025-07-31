@@ -5,6 +5,7 @@ from xgboost import XGBClassifier
 
 from src.utils.s3_loader import load_npy_from_s3
 from src.models.base_model import train_model
+from src.features.feature_processor import FeatureProcessor
 
 model_map = {
     "logreg": LogisticRegression,
@@ -26,6 +27,10 @@ def run_training(config):
     X_val = load_npy_from_s3("val_X.npy")
     y_val = load_npy_from_s3("val_y.npy")
 
+    processor = FeatureProcessor()
+    processor.fit(X_train)
+    processor.save("feature_processor.pkl")
+
     model_cls = model_map.get(model_type)
     if model_cls is None:
         raise ValueError(f"Unknown model_type: {model_type}")
@@ -39,6 +44,7 @@ def run_training(config):
 
     best_model = grid.best_estimator_
     best_params = grid.best_params_
+
 
     train_model(best_model, model_type, X_train, y_train, X_val, y_val, best_params, run_source=run_mode)
 
