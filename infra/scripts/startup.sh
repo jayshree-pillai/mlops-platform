@@ -22,6 +22,11 @@ sudo systemctl start redis-server
 docker update --restart=always mlflow-postgres
 docker start mlflow-postgres 2>/dev/null || true
 
+until pg_isready -h localhost -p 5432 -U mlflow_user; do
+  echo "Waiting for Postgres..."
+  sleep 2
+done
+
 # === Start MLflow Tracking Server ===
 mlflow ui --backend-store-uri postgresql://mlflow_user:mlflow_pass@localhost:5432/mlflow_db --default-artifact-root s3://mlops-fraud-dev/models/ --host 0.0.0.0 --port 5000 &
 
