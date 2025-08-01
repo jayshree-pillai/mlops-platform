@@ -1,0 +1,31 @@
+{
+  "Comment": "Fraud retraining pipeline",
+  "StartAt": "LoadTrainingData",
+  "States": {
+    "LoadTrainingData": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:869935087425:function:load-training-data",
+      "Next": "PreprocessData"
+    },
+    "PreprocessData": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:869935087425:function:preprocess-data",
+      "Next": "TrainModel"
+    },
+    "TrainModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:869935087425:function:train-model",
+      "Next": "EvaluateModel"
+    },
+    "EvaluateModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:869935087425:function:evaluate-model",
+      "Next": "LogToMLflow"
+    },
+    "LogToMLflow": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:869935087425:function:log-to-mlflow",
+      "End": true
+    }
+  }
+}

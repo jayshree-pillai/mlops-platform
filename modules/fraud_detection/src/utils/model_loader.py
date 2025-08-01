@@ -5,12 +5,16 @@ import os
 BUCKET = "mlops-fraud-dev"
 
 def get_model_and_processor(version="v1"):
-    model_path = f"/tmp/model_{version}.pkl"
-    processor_path = f"/tmp/processor_{version}.pkl"
+    bucket = os.environ["MODEL_BUCKET"]
+    model_key = os.environ["MODEL_KEY"]
+    schema_key = os.environ["SCHEMA_KEY"]
+
+    model_path = "/tmp/model.pkl"
+    processor_path = "/tmp/feature_processor.pkl"
 
     s3 = boto3.client("s3")
-    s3.download_file(BUCKET, f"models/{version}/model.pkl", model_path)
-    s3.download_file(BUCKET, f"models/{version}/feature_processor.pkl", processor_path)
+    s3.download_file(bucket, model_key, model_path)
+    s3.download_file(bucket, schema_key, processor_path)
 
     model = joblib.load(model_path)
     processor = joblib.load(processor_path)

@@ -2,9 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY src ./src
+COPY scripts ./scripts
+COPY modules/fraud_detection/config ./config
+
+EXPOSE 8080
 
 CMD ["uvicorn", "src.router.app:app", "--host", "0.0.0.0", "--port", "8080"]

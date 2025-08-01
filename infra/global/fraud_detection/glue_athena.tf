@@ -1,0 +1,52 @@
+resource "aws_glue_catalog_database" "fraud_db" {
+  name = "fraud_features_db"
+}
+
+resource "aws_glue_catalog_table" "fraud_fg_table" {
+  name          = "fraud_features"
+  database_name = aws_glue_catalog_database.fraud_db.name
+
+  table_type = "EXTERNAL_TABLE"
+
+  storage_descriptor {
+    location      = "s3://mlops-fraud-dev/feature_store/"
+    input_format  = "org.apache.hadoop.mapred.TextInputFormat"
+    output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+
+    columns = [
+      { name = "step",              type = "int" },
+      { name = "type",              type = "string" },
+      { name = "amount",            type = "double" },
+      { name = "nameOrig",          type = "string" },
+      { name = "oldbalanceOrg",     type = "double" },
+      { name = "newbalanceOrig",    type = "double" },
+      { name = "nameDest",          type = "string" },
+      { name = "oldbalanceDest",    type = "double" },
+      { name = "newbalanceDest",    type = "double" },
+      { name = "isFraud",           type = "int" },
+      { name = "isFlaggedFraud",    type = "int" }
+      { name = "tx_id",             type = "string" },
+      { name = "timestamp",         type = "string" },
+      { name = "dataset_split",     type = "string" }
+    ]
+
+
+    serde_info {
+      serialization_library = "org.openx.data.jsonserde.JsonSerDe"
+    }
+  }
+}
+
+resource "aws_athena_workgroup" "fraud_athena" {
+  name = "fraud_athena"
+  configuration {
+    result_configuration {
+      output_location = "s3://mlops-fraud-dev/athena_results/"
+    }
+  }
+}
+#IF U need to add additonal columns:
+#aws athena start-query-execution \
+#  --query-string "ALTER TABLE fraud_features ADD COLUMNS (tx_id string, timestamp string, dataset_split string);" \
+#  --query-execution-context Database=fraud_features_db \
+#  --result-configuration OutputLocation=s3://mlops-fraud-dev/athena_results/
