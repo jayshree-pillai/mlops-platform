@@ -3,6 +3,7 @@ from sklearn.metrics import classification_report, roc_auc_score
 import joblib
 import shap
 import matplotlib.pyplot as plt
+from src.features.feature_processor import FeatureProcessor
 
 def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manual"):
     with mlflow.start_run():
@@ -26,11 +27,14 @@ def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manu
         with open(report_path, "w") as f:
             f.write(report_txt)
 
-        # SHAP explainability
-        explainer = shap.Explainer(model, X_val)
-        shap_values = explainer(X_val)
+        processor = FeatureProcessor.load("feature_processor.pkl")
+        X_val_df = pd.DataFrame(X_val, columns=processor.feature_columns)
 
-        shap.summary_plot(shap_values, X_val, show=False)
+        # SHAP explainability
+        explainer = shap.Explainer(model, X_val_df)
+        shap_values = explainer(X_val_df)
+        shap.summary_plot(shap_values, X_val_df, show=False)
+
         summary_path = f"{model_name}_shap_summary.png"
         plt.savefig(summary_path)
 
