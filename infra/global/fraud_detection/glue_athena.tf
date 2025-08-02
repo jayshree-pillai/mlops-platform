@@ -14,21 +14,64 @@ resource "aws_glue_catalog_table" "fraud_fg_table" {
       output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
 
     columns = [
-      { name = "step",            type = "int" },
-      { name = "type",            type = "string" },
-      { name = "amount",          type = "double" },
-      { name = "nameOrig",        type = "string" },
-      { name = "oldbalanceOrg",   type = "double" },
-      { name = "newbalanceOrig",  type = "double" },
-      { name = "nameDest",        type = "string" },
-      { name = "oldbalanceDest",  type = "double" },
-      { name = "newbalanceDest",  type = "double" },
-      { name = "isFraud",         type = "int" },
-      { name = "isFlaggedFraud",  type = "int" },
-      { name = "tx_id",           type = "string" },
-      { name = "timestamp",       type = "string" },
-      { name = "dataset_split",   type = "string" }
+      {
+        name = "step"
+        type = "int"
+      },
+      {
+        name = "type"
+        type = "string"
+      },
+      {
+        name = "amount"
+        type = "double"
+      },
+      {
+        name = "nameOrig"
+        type = "string"
+      },
+      {
+        name = "oldbalanceOrg"
+        type = "double"
+      },
+      {
+        name = "newbalanceOrig"
+        type = "double"
+      },
+      {
+        name = "nameDest"
+        type = "string"
+      },
+      {
+        name = "oldbalanceDest"
+        type = "double"
+      },
+      {
+        name = "newbalanceDest"
+        type = "double"
+      },
+      {
+        name = "isFraud"
+        type = "int"
+      },
+      {
+        name = "isFlaggedFraud"
+        type = "int"
+      },
+      {
+        name = "tx_id"
+        type = "string"
+      },
+      {
+        name = "timestamp"
+        type = "string"
+      },
+      {
+        name = "dataset_split"
+        type = "string"
+      }
     ]
+
 
       ser_de_info {
         serialization_library = "org.openx.data.jsonserde.JsonSerDe"
