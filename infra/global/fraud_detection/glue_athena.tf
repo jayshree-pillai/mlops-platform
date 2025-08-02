@@ -8,31 +8,73 @@ resource "aws_glue_catalog_table" "fraud_fg_table" {
 
   table_type = "EXTERNAL_TABLE"
 
-  storage_descriptor {
-    location      = "s3://mlops-fraud-dev/feature_store/"
-    input_format  = "org.apache.hadoop.mapred.TextInputFormat"
-    output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+storage_descriptor {
+  location      = "s3://mlops-fraud-dev/feature_store/"
+  input_format  = "org.apache.hadoop.mapred.TextInputFormat"
+  output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
 
-    column { name = "step"            type = "int" }
-    column { name = "type"            type = "string" }
-    column { name = "amount"          type = "double" }
-    column { name = "nameOrig"        type = "string" }
-    column { name = "oldbalanceOrg"   type = "double" }
-    column { name = "newbalanceOrig"  type = "double" }
-    column { name = "nameDest"        type = "string" }
-    column { name = "oldbalanceDest"  type = "double" }
-    column { name = "newbalanceDest"  type = "double" }
-    column { name = "isFraud"         type = "int" }
-    column { name = "isFlaggedFraud"  type = "int" }
-    column { name = "tx_id"           type = "string" }
-    column { name = "timestamp"       type = "string" }
-    column { name = "dataset_split"   type = "string" }
+  column {
+    name = "step"
+    type = "int"
+  }
+  column {
+    name = "type"
+    type = "string"
+  }
+  column {
+    name = "amount"
+    type = "double"
+  }
+  column {
+    name = "nameOrig"
+    type = "string"
+  }
+  column {
+    name = "oldbalanceOrg"
+    type = "double"
+  }
+  column {
+    name = "newbalanceOrig"
+    type = "double"
+  }
+  column {
+    name = "nameDest"
+    type = "string"
+  }
+  column {
+    name = "oldbalanceDest"
+    type = "double"
+  }
+  column {
+    name = "newbalanceDest"
+    type = "double"
+  }
+  column {
+    name = "isFraud"
+    type = "int"
+  }
+  column {
+    name = "isFlaggedFraud"
+    type = "int"
+  }
+  column {
+    name = "tx_id"
+    type = "string"
+  }
+  column {
+    name = "timestamp"
+    type = "string"
+  }
+  column {
+    name = "dataset_split"
+    type = "string"
+  }
 
   ser_de_info {
     serialization_library = "org.openx.data.jsonserde.JsonSerDe"
   }
-
 }
+
 
 resource "aws_athena_workgroup" "fraud_athena" {
   name = "fraud_athena"
