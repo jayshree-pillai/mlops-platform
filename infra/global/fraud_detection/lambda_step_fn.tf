@@ -1,3 +1,23 @@
+resource "aws_iam_role" "stepfn_exec_role" {
+  name = "stepfn_exec_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "states.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "stepfn_basic" {
+  role       = aws_iam_role.stepfn_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSStepFunctionsFullAccess"
+}
+
 # simple, clean retraining pipeline
 resource "aws_sfn_state_machine" "fraud_retrain_sm" {
   name     = "fraud-retrain-stepfn"
