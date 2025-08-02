@@ -31,7 +31,7 @@ resource "aws_glue_catalog_table" "fraud_fg_table" {
   ser_de_info {
     serialization_library = "org.openx.data.jsonserde.JsonSerDe"
   }
-  }
+
 }
 
 resource "aws_athena_workgroup" "fraud_athena" {
