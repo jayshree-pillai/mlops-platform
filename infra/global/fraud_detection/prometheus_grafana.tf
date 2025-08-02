@@ -47,3 +47,4 @@ resource "aws_instance" "monitoring_ec2" {
     Role = "monitoring"
   }
 }
+
