@@ -5,9 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src ./src
-COPY scripts ./scripts
-COPY modules/fraud_detection/config ./config
+COPY ../src ./src
+COPY ../scripts ./scripts
+COPY ../config ./config
 
 EXPOSE 8080
 
