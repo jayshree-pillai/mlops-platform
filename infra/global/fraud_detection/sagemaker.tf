@@ -30,12 +30,7 @@ resource "aws_sagemaker_model" "byoc_model" {
   primary_container {
     image          = "869935087425.dkr.ecr.us-east-1.amazonaws.com/fraud-byoc:latest"
     mode           = "SingleModel"
-    model_data_url = null  # not needed for BYOC container
-
     environment = {
-      MODEL_BUCKET     = "mlops-fraud-dev"
-      MODEL_KEY        = "mlruns/0/123abc456def789/artifacts/model/model.pkl"
-      SCHEMA_KEY       = "mlruns/0/123abc456def789/artifacts/model/features.pkl"
       MODEL_VERSION    = "v1"
       PUSHGATEWAY_URL  = "http://52.22.35.87:9091"  # This is PushGateway, not Prometheus
     }
