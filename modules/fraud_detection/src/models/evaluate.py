@@ -33,7 +33,7 @@ def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manu
         shap.summary_plot(shap_values, X_val, show=False)
         summary_path = f"{model_name}_shap_summary.png"
         plt.savefig(summary_path)
-        
-        mlflow.log_artifact(report_path,artifact_path =model_name)
 
+        mlflow.log_artifact(report_path,artifact_path =model_name)
+        mlflow.log_artifact(f"{model_name}_shap_summary.png", artifact_path=model_name)
         mlflow.sklearn.log_model(model,artifact_path = model_name)

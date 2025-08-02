@@ -14,7 +14,8 @@ X_train = load_npy_from_s3("train_X.npy")
 y_train = load_npy_from_s3("train_y.npy")
 X_val = load_npy_from_s3("val_X.npy")
 y_val = load_npy_from_s3("val_y.npy")
-
+X_train = X_train[:50000]
+y_train = y_train[:50000]
 print("Starting RF training...")
 
 param_grid = {
