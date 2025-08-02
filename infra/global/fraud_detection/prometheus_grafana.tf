@@ -27,14 +27,21 @@ resource "aws_security_group" "monitoring_sg" {
   tags = {
     Name = "prometheus-grafana"
   }
+  lifecycle {
+  prevent_destroy = true
+  }
 }
 resource "aws_instance" "monitoring_ec2" {
   ami                    = "ami-020cba7c55df1f615"
-  instance_type          = "t3.micro"
+  instance_type          = "t3.xlarge"
   subnet_id              = "subnet-0d4cee39fd0c06d57"
   vpc_security_group_ids = [aws_security_group.monitoring_sg.id]
   key_name               = "jp-ec2-key"
-
+  root_block_device {
+    volume_size           = 20
+    volume_type           = "gp2"
+    delete_on_termination = false  # << this ensures the EBS sticks around
+  }
   tags = {
     Name = "prometheus-grafana"
     Role = "monitoring"
