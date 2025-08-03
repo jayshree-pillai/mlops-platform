@@ -6,7 +6,6 @@ from src.utils.feature_store_logger import log_features_to_store
 from src.features.feature_loader import load_features_from_fg
 from src.utils.s3_loader import load_npy_from_s3
 from sklearn.model_selection import GridSearchCV
-
 from src.utils.s3_loader import load_npy_from_s3
 from src.models.base_model import train_model
 from src.features.feature_processor import FeatureProcessor
