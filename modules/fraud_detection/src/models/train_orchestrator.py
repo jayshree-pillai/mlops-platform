@@ -60,14 +60,17 @@ def run_training(config, model=None):
     assert final_model is not None and final_params is not None, "Model or params not initialized"
 
     train_model(final_model, model_type, X_train, y_train, X_val, y_val, final_params, run_source=run_mode)
-    # After training is complete and processor saved
-    model_id = log_features_to_store(
-        X_train, y_train,
-        bucket="mlops-fraud-dev",
-        s3_prefix="feature_store/best_model_runs",
-        processor=processor,
-        model_id=model_type
-    )
+    if model_type == "xgb":
+        model_id = log_features_to_store(
+            X_train, y_train,
+            bucket="mlops-fraud-dev",
+            s3_prefix="feature_store/best_model_runs",
+            processor=processor,
+            model_id=f"{model_type}_{version}"
+        )
+        print("📦 Feature store logging complete.")
+    else:
+        print(f"🚫 Skipping feature store logging for baseline model: {model_type}")
 
     print("Training complete.")
 
