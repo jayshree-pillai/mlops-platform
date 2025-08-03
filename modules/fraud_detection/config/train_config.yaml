@@ -1,39 +1,9 @@
-run_mode: "pipeline"
-version: "v1"
-retrain_mode: false
-
-#logistic Regression
 model_type: "logreg"
 param_grid:
   penalty: ["l2"]
   C: [0.1] #, 1.0, 10.0]
   max_iter: [1000]
-
-# CART
-#model_type: "cart"
-#param_grid:
-#  max_depth: [5, 10, 20]
-#  min_samples_split: [2, 10, 50]
-
- # Random Forest
-#model_type: "rf"
-#param_grid:
-#  n_estimators: [100, 200]
-#  max_depth: [10, 20]
-#  min_samples_split: [2,5]
-
-# XGBoost
-#model_type: "xgb"
-#param_grid:
-#  n_estimators: [100, 200, 300]
-#  max_depth: [3, 5, 7]
-#  learning_rate: [0.01, 0.05, 0.1]
-#  subsample: [0.8, 1.0]
-#  colsample_bytree: [0.8, 1.0]
-#version: "final-v1"
-
-#retrain_mode: true
-#model_type: "xgboost"       # 🔥 Must match exact model name in MLflow Registry
-params: {}              # 🔐 REQUIRED or MLflow logging will crash
-#version: "v2"           # ✅ Optional but HIGHLY recommended (for model_id / S3 logs)
-#run_mode: "retrain"     # ✅ Recommended for clean MLflow tagging
+params: {}
+run_mode: "pipeline"
+version: "v1"
+retrain_mode: false

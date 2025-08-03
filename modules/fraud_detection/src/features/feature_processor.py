@@ -19,17 +19,26 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         ]
 
     def build_pipeline(self):
-        # Dynamically detect numeric and categorical features
         numeric_features = []
         cat_features = []
 
         for col in self.feature_columns:
             if col.lower() == "type":
-                # Safe: treat 'type' as categorical only if unique values < 20
-                self.cat_check = col  # store for optional SHAP use
-                cat_features.append(col)
+                # Validate 'type' column — must be string & low cardinality
+                self.cat_check = col  # Store for optional SHAP
+                unique_values = self.X_sample[col].dropna().unique()
+
+                if all(isinstance(v, str) for v in unique_values) and len(unique_values) < 20:
+                    cat_features.append(col)
+                else:
+                    print(f"⚠️ Skipping one-hot for '{col}' — non-string or high cardinality")
             else:
-                numeric_features.append(col)
+                # Enforce all others are numeric
+                try:
+                    _ = pd.to_numeric(self.X_sample[col].dropna().iloc[0])
+                    numeric_features.append(col)
+                except Exception:
+                    print(f"⚠️ Column '{col}' is not numeric — will be skipped")
 
         numeric_pipeline = Pipeline([
             ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
@@ -43,15 +52,7 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         transformers = []
         if numeric_features:
             transformers.append(('num', numeric_pipeline, numeric_features))
-
-        # Optional check: Only apply one-hot if 'type' column has low cardinality
-        if cat_features and hasattr(self, "X_sample"):
-            if self.X_sample[self.cat_check].nunique() < 20:
-                transformers.append(('cat', cat_pipeline, cat_features))
-            else:
-                print(f"⚠️ Skipping one-hot for '{self.cat_check}' — high cardinality")
-        elif cat_features:
-            # fallback: try to add it anyway (if no sample to check)
+        if cat_features:
             transformers.append(('cat', cat_pipeline, cat_features))
 
         self.pipeline = ColumnTransformer(transformers)
