@@ -68,15 +68,17 @@ def run_training(config, model=None):
             processor=processor,
             model_id=f"{model_type}_{version}"
         )
+
+        # 🔥 Trigger Glue crawler to update table metadata
+        import boto3
+        glue = boto3.client("glue")
+        glue.start_crawler(Name="fraud_featurestore_crawler")  # 🔁 match your TF name
+        print("🧹 Glue crawler triggered to refresh schema.")
+
         print("📦 Feature store logging complete.")
     else:
         print(f"🚫 Skipping feature store logging for baseline model: {model_type}")
 
     print("Training complete.")
 
-    # 🔥 Trigger Glue crawler to update table metadata
-    import boto3
-    glue = boto3.client("glue")
-    glue.start_crawler(Name="fraud_featurestore_crawler")  # 🔁 match your TF name
-    print("🧹 Glue crawler triggered to refresh schema.")
 
