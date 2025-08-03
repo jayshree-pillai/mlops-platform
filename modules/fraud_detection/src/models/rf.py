@@ -5,7 +5,7 @@ mlflow.set_experiment("fraud_rf")
 import sys, os
 sys.path.append(os.path.abspath("modules/fraud_detection/src"))
 
-from models.base_model import train_model
+from src.models.base_model import train_model
 from utils.s3_loader import load_npy_from_s3
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
