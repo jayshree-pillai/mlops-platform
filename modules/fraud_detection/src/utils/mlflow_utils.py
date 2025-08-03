@@ -1,7 +1,6 @@
 import mlflow
 
 def init_mlflow(tracking_uri="http://3.215.110.164:5000", experiment_name="fraud_default"):
-    import mlflow
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment_name)
     print("🔗 Tracking URI:", mlflow.get_tracking_uri())
