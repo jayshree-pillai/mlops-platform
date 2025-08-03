@@ -60,7 +60,7 @@ def run_training(config, model=None):
     assert final_model is not None and final_params is not None, "Model or params not initialized"
 
     train_model(final_model, model_type, X_train, y_train, X_val, y_val, final_params, run_source=run_mode)
-    if model_type == "xgb":
+    if model_type == "xgb" and not config.get("retrain_mode", False):
         model_id = log_features_to_store(
             X_train, y_train,
             bucket="mlops-fraud-dev",
