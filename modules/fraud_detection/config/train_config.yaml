@@ -34,6 +34,6 @@ param_grid:
 
 #retrain_mode: true
 #model_type: "xgboost"       # 🔥 Must match exact model name in MLflow Registry
-#params: {}              # 🔐 REQUIRED or MLflow logging will crash
+params: {}              # 🔐 REQUIRED or MLflow logging will crash
 #version: "v2"           # ✅ Optional but HIGHLY recommended (for model_id / S3 logs)
 #run_mode: "retrain"     # ✅ Recommended for clean MLflow tagging

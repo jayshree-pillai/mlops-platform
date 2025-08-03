@@ -13,7 +13,7 @@ def load_staging_model(model_name):
         print(f"⚠️  Failed to load staging model: {e}")
         return None
 
-@hydra.main(config_path="../config", config_name="train_config.yaml")
+@hydra.main(config_path="../config", config_name="train_config.yaml", version_base=None)
 def main(config: DictConfig):
     if config.get("retrain_mode", False):
         model = load_staging_model(config.model_type)
