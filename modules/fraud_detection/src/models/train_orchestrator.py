@@ -5,6 +5,7 @@ from xgboost import XGBClassifier
 from src.utils.feature_store_logger import log_features_to_store
 from src.features.feature_loader import load_features_from_fg
 from src.utils.s3_loader import load_npy_from_s3
+from sklearn.model_selection import GridSearchCV
 
 from src.utils.s3_loader import load_npy_from_s3
 from src.models.base_model import train_model
@@ -44,34 +45,31 @@ def run_training(config, model=None):
     if model_cls is None:
         raise ValueError(f"Unknown model_type: {model_type}")
 
-#    model = model_cls(**params)
-#    train_model(model, model_type, X_train, y_train, X_val, y_val, params, run_source=run_mode)
 
-    grid = GridSearchCV(model_cls(), config.param_grid, cv=3, scoring='roc_auc')
-    print("Running GridSearchCV...")
-    grid.fit(X_train, y_train)
-
-    best_model = grid.best_estimator_
-    best_params = grid.best_params_
-
-    if model is None:
-        model_cls = model_map.get(model_type)
-        model = model_cls(**params)
-        print("🛠️  No staging model found. Using fresh model.")
+    if model is not None:
+        print("✅ Using model loaded from staging. Skipping GridSearch.")
+        final_model = model
+        final_params = params  # could pull from MLflow if needed
     else:
-        print("✅ Using model loaded from staging.")
+        print("🔍 Running GridSearchCV...")
+        grid = GridSearchCV(model_cls(), config.param_grid, cv=3, scoring='roc_auc', n_jobs=-1)
+        grid.fit(X_train, y_train)
+        final_model = grid.best_estimator_
+        final_params = grid.best_params_
 
-    train_model(best_model, model_type, X_train, y_train, X_val, y_val, best_params, run_source=run_mode)
+    assert final_model is not None and final_params is not None, "Model or params not initialized"
 
-    print("Training complete.")
-
+    train_model(final_model, model_type, X_train, y_train, X_val, y_val, final_params, run_source=run_mode)
     # After training is complete and processor saved
     model_id = log_features_to_store(
         X_train, y_train,
         bucket="mlops-fraud-dev",
         s3_prefix="feature_store/best_model_runs",
-        processor=processor
+        processor=processor,
+        model_id=model_type
     )
+
+    print("Training complete.")
 
     # 🔥 Trigger Glue crawler to update table metadata
     import boto3

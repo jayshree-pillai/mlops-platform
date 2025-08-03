@@ -15,11 +15,15 @@ def load_staging_model(model_name):
 
 @hydra.main(config_path="../config", config_name="train_config.yaml")
 def main(config: DictConfig):
-    model = None
     if config.get("retrain_mode", False):
         model = load_staging_model(config.model_type)
+        assert config.model_type in ["logreg", "cart", "rf", "xgb"], "Invalid model_type"
 
-    run_training(config, model)
+        if model is None:
+            raise ValueError("Retrain mode is enabled, but staging model not found.")
+        run_training(config, model)
+    else:
+        run_training(config)
 
 if __name__ == "__main__":
     main()

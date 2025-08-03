@@ -3,6 +3,8 @@ from sklearn.metrics import classification_report, roc_auc_score
 import joblib
 import shap
 import matplotlib.pyplot as plt
+import os
+import pandas as pd
 from src.features.feature_processor import FeatureProcessor
 
 def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manual"):
@@ -18,6 +20,7 @@ def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manu
             auc = roc_auc_score(y_val, y_proba)
             mlflow.log_metric("val_auc", auc)
         except AttributeError:
+            mlflow.log_metric("val_auc", -1)
             pass  # Model doesn't support predict_proba
 
         mlflow.log_params(params or {})
@@ -27,8 +30,12 @@ def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manu
         with open(report_path, "w") as f:
             f.write(report_txt)
 
-        processor = FeatureProcessor.load("feature_processor.pkl")
-        X_val_df = pd.DataFrame(X_val, columns=processor.feature_columns)
+        try:
+            processor = FeatureProcessor.load("feature_processor.pkl")
+            X_val_df = pd.DataFrame(X_val, columns=processor.feature_columns)
+        except Exception as e:
+            print(f"⚠️ Processor not found or failed: {e} — using default column names.")
+            X_val_df = pd.DataFrame(X_val, columns=[f"f{i}" for i in range(X_val.shape[1])])
 
         # SHAP explainability
         explainer = shap.Explainer(model, X_val_df)
