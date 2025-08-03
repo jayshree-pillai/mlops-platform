@@ -37,15 +37,21 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         self.build_pipeline()
         if isinstance(X, np.ndarray):
-            # Fallback mode for .npy raw data
-            self.feature_columns = [
+            raw_names = [
                 'step', 'type', 'amount',
                 'oldbalanceOrg', 'newbalanceOrig',
                 'oldbalanceDest', 'newbalanceDest'
             ]
+            total_cols = X.shape[1]
+
+            if total_cols <= len(raw_names):
+                self.feature_columns = raw_names[:total_cols]
+            else:
+                extra_cols = [f"feature_{i}" for i in range(len(raw_names), total_cols)]
+                self.feature_columns = raw_names + extra_cols
+
             X = pd.DataFrame(X, columns=self.feature_columns)
         else:
-            # In retrain mode: infer from real Athena-pulled DataFrame
             self.feature_columns = X.columns.tolist()
         X_proc = X[self.feature_columns].copy()
         self.pipeline.fit(X_proc)
