@@ -52,7 +52,7 @@ def run_training(config, model=None):
         final_params = params  # could pull from MLflow if needed
     else:
         print("🔍 Running GridSearchCV...")
-        grid = GridSearchCV(model_cls(), config.param_grid, cv=3, scoring='roc_auc', n_jobs=-1)
+        grid = GridSearchCV(model_cls(),dict(config.param_grid), cv=3, scoring='roc_auc', n_jobs=-1)
         grid.fit(X_train, y_train)
         final_model = grid.best_estimator_
         final_params = grid.best_params_
