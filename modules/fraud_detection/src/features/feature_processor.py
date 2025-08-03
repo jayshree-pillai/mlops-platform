@@ -17,8 +17,17 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         ]
 
     def build_pipeline(self):
-        numeric_features = ['step', 'amount', 'oldbalanceOrg', 'newbalanceOrig', 'oldbalanceDest', 'newbalanceDest']
-        cat_features = ['type']
+        # Dynamically detect numeric and categorical features
+        numeric_features = []
+        cat_features = []
+
+        for col in self.feature_columns:
+            if col.lower() == "type":
+                # Safe: treat 'type' as categorical only if unique values < 20
+                self.cat_check = col  # store for optional SHAP use
+                cat_features.append(col)
+            else:
+                numeric_features.append(col)
 
         numeric_pipeline = Pipeline([
             ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
@@ -29,13 +38,23 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
             ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
         ])
 
-        self.pipeline = ColumnTransformer([
-            ('num', numeric_pipeline, numeric_features),
-            ('cat', cat_pipeline, cat_features)
-        ])
+        transformers = []
+        if numeric_features:
+            transformers.append(('num', numeric_pipeline, numeric_features))
+
+        # Optional check: Only apply one-hot if 'type' column has low cardinality
+        if cat_features and hasattr(self, "X_sample"):
+            if self.X_sample[self.cat_check].nunique() < 20:
+                transformers.append(('cat', cat_pipeline, cat_features))
+            else:
+                print(f"⚠️ Skipping one-hot for '{self.cat_check}' — high cardinality")
+        elif cat_features:
+            # fallback: try to add it anyway (if no sample to check)
+            transformers.append(('cat', cat_pipeline, cat_features))
+
+        self.pipeline = ColumnTransformer(transformers)
 
     def fit(self, X, y=None):
-        self.build_pipeline()
         if isinstance(X, np.ndarray):
             raw_names = [
                 'step', 'type', 'amount',
@@ -54,6 +73,9 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         else:
             self.feature_columns = X.columns.tolist()
         X_proc = X[self.feature_columns].copy()
+        # Store for pipeline logic
+        self.X_sample = X.head(100)
+        self.build_pipeline()
         self.pipeline.fit(X_proc)
         self.schema_hash_value = self.hash_schema()
 
