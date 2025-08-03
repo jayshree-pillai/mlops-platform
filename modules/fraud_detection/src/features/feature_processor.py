@@ -36,6 +36,9 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         self.build_pipeline()
+        if isinstance(X, np.ndarray):
+            X = pd.DataFrame(X, columns=[f"f{i}" for i in range(X.shape[1])])  # 👈 fallback names
+        self.feature_columns = X.columns.tolist()
         X_proc = X[self.feature_columns].copy()
         self.pipeline.fit(X_proc)
         self.schema_hash_value = self.hash_schema()
