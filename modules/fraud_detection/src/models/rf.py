@@ -23,7 +23,7 @@ param_grid = {
     "max_depth": [10],#, 20],
     "min_samples_split": [2]#, 10]
 }
-grid = GridSearchCV(RandomForestClassifier(n_jobs=-1), param_grid, cv=3, scoring='roc_auc')
+grid = GridSearchCV(RandomForestClassifier(n_jobs=-1), param_grid, cv=3, scoring='roc_auc',n_jobs=-1,pre_dispatch="2*n_jobs"  )
 print("GridSearchCV fitting...")
 grid.fit(X_train, y_train)
 print("GridSearch done. Best params:", grid.best_params_)
