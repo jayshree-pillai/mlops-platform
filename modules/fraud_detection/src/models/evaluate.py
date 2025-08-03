@@ -1,5 +1,4 @@
 import mlflow
-from src.utils.mlflow_utils import init_mlflow
 from sklearn.metrics import classification_report, roc_auc_score
 import joblib
 import shap
@@ -10,7 +9,6 @@ from src.features.feature_processor import FeatureProcessor
 
 def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manual"):
     print("Entered log and report in evaluate.py")
-    init_mlflow()
     with mlflow.start_run():
         mlflow.set_tag("run_source", run_source)
         mlflow.set_tag("model_type", model_name)

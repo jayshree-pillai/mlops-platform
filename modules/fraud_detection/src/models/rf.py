@@ -1,5 +1,6 @@
+from src.utils.mlflow_utils import init_mlflow
 import mlflow
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
+init_mlflow()
 mlflow.set_experiment("fraud_rf")
 
 import sys, os
