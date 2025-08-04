@@ -4,12 +4,20 @@ import pyarrow.parquet as pq
 import boto3
 import uuid
 from datetime import datetime
+from src.features.feature_processor import FeatureProcessor
 
 def log_features_to_store(X, y, bucket, s3_prefix, processor=None, model_id=None):
     if model_id is None:
         model_id = str(uuid.uuid4())
 
-    df = pd.DataFrame(X)
+    try:
+        if processor and hasattr(processor, "feature_columns"):
+            df = pd.DataFrame(X, columns=processor.feature_columns)
+        else:
+            raise ValueError("Processor missing or invalid.")
+    except Exception as e:
+        print(f"⚠️ Processor not found or failed: {e} — using default column names.")
+        df = pd.DataFrame(X, columns=[f"f{i}" for i in range(X.shape[1])])
     df["label"] = y
     df["model_id"] = model_id
     df["timestamp"] = datetime.utcnow().isoformat()
