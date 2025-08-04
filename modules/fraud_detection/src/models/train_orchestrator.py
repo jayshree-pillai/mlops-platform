@@ -32,13 +32,10 @@ def run_training(config, model=None):
         print("🧪 Fresh training: loading training data from S3 .npy...")
         X_train = load_npy_from_s3("train_X.npy")
         y_train = load_npy_from_s3("train_y.npy")
-        X_train = X_train[:50000]
-        y_train = y_train[:50000]
     # Validation always from .npy for now
     X_val = load_npy_from_s3("val_X.npy")
     y_val = load_npy_from_s3("val_y.npy")
-    X_train = X_train[:10000]
-    y_train = y_train[:10000]
+
 
     processor = FeatureProcessor()
     processor.fit(X_train)
@@ -63,7 +60,7 @@ def run_training(config, model=None):
     assert final_model is not None and final_params is not None, "Model or params not initialized"
 
     train_model(final_model, model_type, X_train, y_train, X_val, y_val, final_params, run_source=run_mode)
-    if model_type == "xgb" and not config.get("retrain_mode", False):
+    if model_type == "xgb" and not getattr(config,"retrain_mode", False):
         model_id = log_features_to_store(
             X_train, y_train,
             bucket="mlops-fraud-dev",

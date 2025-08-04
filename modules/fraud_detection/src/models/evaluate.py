@@ -51,4 +51,6 @@ def log_and_report(model, model_name, X_val, y_val, params=None,run_source="manu
 
         mlflow.log_artifact(report_path,artifact_path =model_name)
         mlflow.log_artifact(f"{model_name}_shap_summary.png", artifact_path=model_name)
+        mlflow.log_artifact("feature_processor.pkl", artifact_path=model_name)
+
         mlflow.sklearn.log_model(model,artifact_path = model_name)
