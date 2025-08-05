@@ -11,7 +11,7 @@ N_SAMPLES = 1000
 def extract_sample_from_s3():
     s3 = boto3.client("s3")
     obj = s3.get_object(Bucket=BUCKET, Key=KEY)
-    df = pd.read_csv(io.BytesIO(obj['Body'].read()), header=None)
+    df = pd.read_csv(io.BytesIO(obj['Body'].read()), header=None, dtype={0: str})
     df.columns = ["complaint_id", "product", "narrative"]  # manually assign
 
     if TEXT_COLUMN not in df.columns:

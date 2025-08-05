@@ -25,7 +25,7 @@ def clean_text(text: str) -> str:
     return text
 
 # === Load and clean complaints
-df = pd.read_csv(INPUT_CSV)
+df = pd.read_csv(INPUT_CSV, dtype={"complaint_id": str})
 df = df.dropna(subset=["narrative", "complaint_id"])
 
 texts = []
