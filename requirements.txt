@@ -18,6 +18,6 @@ sentence-transformers==2.6.1
 streamlit==1.34.0
 faiss-cpu==1.11.0.post1  # compatible with Python 3.12
 langchain==0.1.16
-langchain-community==0.0.26
+langchain-community==0.0.33
 langchain-core==0.1.47
 langchain-openai==0.0.8
