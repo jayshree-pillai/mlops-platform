@@ -11,12 +11,13 @@ N_SAMPLES = 1000
 def extract_sample_from_s3():
     s3 = boto3.client("s3")
     obj = s3.get_object(Bucket=BUCKET, Key=KEY)
-    df = pd.read_csv(io.BytesIO(obj['Body'].read()))
+    df = pd.read_csv(io.BytesIO(obj['Body'].read()), header=None)
+    df.columns = ["complaint_id", "product", "narrative"]  # manually assign
 
     if TEXT_COLUMN not in df.columns:
         raise ValueError(f"❌ Column '{TEXT_COLUMN}' not found.")
-
-    df = df[[TEXT_COLUMN]].dropna().sample(n=min(N_SAMPLES, len(df)), random_state=42)
+    df = df[["complaint_id", TEXT_COLUMN]].dropna()
+    df = df.sample(n=min(N_SAMPLES, len(df)), random_state=42)
 
     # Save locally first
     df.to_csv("complaints_sample.csv", index=False)

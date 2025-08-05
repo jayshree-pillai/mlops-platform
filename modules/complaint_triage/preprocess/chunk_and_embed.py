@@ -1,32 +1,71 @@
 import pandas as pd
-import pickle
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+import os
+import boto3
+import re
+from bs4 import BeautifulSoup
+from langchain.text_splitter import TokenTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-import boto3
-import os
+from sklearn.preprocessing import normalize
+import faiss
+# === Config
+INPUT_CSV = "complaints_sample.csv"
+OUT_DIR = "semantic_index"
+BUCKET = "complaint-classifier-jp2025"
+PREFIX = "rag/semantic_index/"
+CHUNK_SIZE = 200
+CHUNK_OVERLAP = 100
 
+# === Clean-up Function
+def clean_text(text: str) -> str:
+    text = BeautifulSoup(text, "html.parser").get_text()  # strip HTML
+    text = text.strip()
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"(Regards,|Sincerely,|Forwarded message:)", "", text, flags=re.I)
+    return text
 
-# === Load complaints
-df = pd.read_csv("complaints_sample.csv")
-texts = df["narrative"].dropna().tolist()
+# === Load and clean complaints
+df = pd.read_csv(INPUT_CSV)
+df = df.dropna(subset=["narrative", "complaint_id"])
 
-# === Chunk
-splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-docs = splitter.create_documents(texts)
+texts = []
+ids = []
 
-# === Embed
+for _, row in df.iterrows():
+    texts.append(clean_text(row["narrative"]))
+    ids.append(str(row["complaint_id"]))
+
+# === Token-based chunking
+splitter = TokenTextSplitter(
+    chunk_size=CHUNK_SIZE,
+    chunk_overlap=CHUNK_OVERLAP,
+    encoding_name="cl100k_base"
+)
+
+docs = splitter.create_documents(
+    texts,
+    metadatas=[{"complaint_id": cid} for cid in ids]
+)
+
+# === Embed and create FAISS index use Cosine Norm
 embedding = OpenAIEmbeddings()
-db = FAISS.from_documents(docs, embedding)
+raw_vectors = embedding.embed_documents([doc.page_content for doc in docs])
+normalized_vectors = normalize(raw_vectors)  # L2-normalized
 
-out_dir = "semantic_index"
-db.save_local(out_dir)
+#Create FAISS index with inner product (cosine)
+index = faiss.IndexFlatIP(len(normalized_vectors[0]))  # IP = dot product
+index.add(normalized_vectors)
+# Store vectors + docs using LangChain wrapper
+db = FAISS(embedding_function=embedding.embed_query, index=index, documents=docs)
+db.save_local(OUT_DIR)
 
+print(f"✅ FAISS index created with {len(docs)} chunks")
+print(f"✅ Saved index to {OUT_DIR}")
+
+# === Upload to S3
 s3 = boto3.client("s3")
-bucket = "complaint-classifier-jp2025"
-prefix = "rag/semantic_index/"
 
-for file in os.listdir(out_dir):
-    path = os.path.join(out_dir, file)
-    s3.upload_file(path, bucket, prefix + file)
-    print(f"✅ Uploaded {file} to s3://{bucket}/{prefix}{file}")
+for file in os.listdir(OUT_DIR):
+    path = os.path.join(OUT_DIR, file)
+    s3.upload_file(path, BUCKET, PREFIX + file)
+    print(f"✅ Uploaded {file} to s3://{BUCKET}/{PREFIX}{file}")
