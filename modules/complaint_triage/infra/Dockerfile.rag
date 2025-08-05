@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install core packages
+RUN pip install --upgrade pip
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy RAG code
+COPY modules/complaint_triage /app/modules/complaint_triage
+
+COPY modules/complaint_triage/app/download_index_from_s3.py .
+RUN python download_index_from_s3.py
+
+# Start FastAPI server
+CMD ["uvicorn", "modules.complaint_triage.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
