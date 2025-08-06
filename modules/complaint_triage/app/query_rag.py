@@ -5,6 +5,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from sklearn.preprocessing import normalize
 import boto3
+import numpy as np
 
 BUCKET = "complaint-classifier-jp2025"
 PREFIX = "rag/semantic_index/"
@@ -28,7 +29,7 @@ query = input("❓ Ask your question: ").strip()
 query_vector = embedding.embed_query(query)
 # === Search top-k from normalized FAISS index
 k = 5
-scores, indices = db.index.search([query_vector], k)
+scores, indices = db.index.search(np.array([query_vector]), k)
 
 # === Apply similarity threshold to filter results
 THRESHOLD = 0.75
