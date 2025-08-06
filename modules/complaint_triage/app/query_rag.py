@@ -23,6 +23,13 @@ embedding = OpenAIEmbeddings()
 download_faiss_from_s3()
 db = FAISS.load_local(index_dir, embedding, allow_dangerous_deserialization=True)
 
+print("\n🧾 Sanity check — top 2 documents in FAISS:")
+doc_ids = list(db.docstore._dict.keys())[:2]
+for i, doc_id in enumerate(doc_ids):
+    doc = db.docstore._dict[doc_id]
+    print(f"\n[{i+1}] complaint_id: {doc.metadata.get('complaint_id')}")
+    print(doc.page_content[:500])
+
 # === Accept user query
 query = input("❓ Ask your question: ").strip()
 
