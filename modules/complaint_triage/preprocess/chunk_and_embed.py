@@ -49,14 +49,7 @@ docs = splitter.create_documents(
 
 # === Embed and create FAISS index use Cosine Norm
 embedding = OpenAIEmbeddings()
-raw_vectors = embedding.embed_documents([doc.page_content for doc in docs])
-normalized_vectors = normalize(raw_vectors)  # L2-normalized
-
-#Create FAISS index with inner product (cosine)
-index = faiss.IndexFlatIP(len(normalized_vectors[0]))  # IP = dot product
-index.add(normalized_vectors)
-# Store vectors + docs using LangChain wrapper
-db = FAISS(embedding_function=embedding.embed_query, index=index, documents=docs)
+db = FAISS.from_documents(documents=docs, embedding=embedding)
 db.save_local(OUT_DIR)
 
 print(f"✅ FAISS index created with {len(docs)} chunks")
