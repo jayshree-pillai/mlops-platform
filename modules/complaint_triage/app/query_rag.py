@@ -37,9 +37,10 @@ query_vector = embedding.embed_query(query)
 # === Search top-k from normalized FAISS index
 k = 5
 scores, indices = db.index.search(np.array([query_vector]), k)
+print(f"\n🔥 Max similarity score: {max(scores[0]):.4f}")
 
 # === Apply similarity threshold to filter results
-THRESHOLD = 0.75
+THRESHOLD = 0.5
 filtered = [
     (db.docstore._dict[db.index_to_docstore_id[i]], scores[0][idx])
     for idx, i in enumerate(indices[0])
