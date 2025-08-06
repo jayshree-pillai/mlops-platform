@@ -25,13 +25,10 @@ db = FAISS.load_local(index_dir, embedding, allow_dangerous_deserialization=True
 # === Accept user query
 query = input("❓ Ask your question: ").strip()
 
-# === Embed and normalize query
 query_vector = embedding.embed_query(query)
-normalized_query = normalize([query_vector])[0]
-
 # === Search top-k from normalized FAISS index
 k = 5
-scores, indices = db.index.search([normalized_query], k)
+scores, indices = db.index.search([query_vector], k)
 
 # === Apply similarity threshold to filter results
 THRESHOLD = 0.75
