@@ -9,7 +9,8 @@ from langchain.text_splitter import TokenTextSplitter
 from openai import OpenAI
 from sklearn.preprocessing import normalize
 import faiss
-
+from tqdm import tqdm
+import time
 # === Config
 INPUT_CSV = "complaints_sample.csv"
 OUT_DIR = "semantic_index"
@@ -21,7 +22,26 @@ PCA_DIM = 256  # try 384 if needed
 
 # === Init OpenAI
 client = OpenAI()
+def batch_embed(texts, batch_size=20, retry_delay=5):
+    client = OpenAI()
+    all_embeddings = []
 
+    for i in tqdm(range(0, len(texts), batch_size), desc="🔢 Embedding in batches"):
+        batch = texts[i:i+batch_size]
+        try:
+            res = client.embeddings.create(
+                model="text-embedding-3-large",
+                input=batch
+            )
+            batch_embeds = [np.array(e.embedding, dtype=np.float32) for e in res.data]
+            all_embeddings.extend(batch_embeds)
+        except Exception as e:
+            print(f"❌ Error on batch {i}–{i+batch_size}: {e}")
+            print(f"⏳ Retrying in {retry_delay}s...")
+            time.sleep(retry_delay)
+            continue
+
+    return np.array(all_embeddings)
 def get_embedding(text):
     res = client.embeddings.create(
         model="text-embedding-3-large",
@@ -50,8 +70,9 @@ docs = splitter.create_documents(texts, metadatas=[{"complaint_id": cid} for cid
 raw_texts = [doc.page_content for doc in docs]
 metadata = [doc.metadata for doc in docs]
 
-print(f"🔢 Embedding {len(raw_texts)} chunks using text-embedding-3-large...")
-embeddings = np.array([get_embedding(t) for t in raw_texts])
+# === Run embedding
+print(f"🔢 Embedding {len(raw_texts)} chunks using OpenAI batch...")
+embeddings = batch_embed(raw_texts, batch_size=20)
 embeddings = normalize(embeddings, axis=1)
 
 # === PCA
