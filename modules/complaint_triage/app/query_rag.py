@@ -1,70 +1,68 @@
 import os
 import pickle
 import faiss
-from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
+import numpy as np
+from openai import OpenAI
 from sklearn.preprocessing import normalize
 import boto3
-import numpy as np
 
+# === Config
 BUCKET = "complaint-classifier-jp2025"
 PREFIX = "rag/semantic_index/"
 OUT_DIR = "semantic_index"
+INDEX_PATH = f"{OUT_DIR}/index.faiss"
+PCA_PATH = f"{OUT_DIR}/pca.transform"
+PICKLE_PATH = f"{OUT_DIR}/index.pkl"
 
-def download_faiss_from_s3():
+def download_artifacts():
     s3 = boto3.client("s3")
     os.makedirs(OUT_DIR, exist_ok=True)
-    for file in ["index.faiss", "index.pkl"]:
-        path = os.path.join(OUT_DIR, file)
-        s3.download_file(BUCKET, PREFIX + file, path)
-# === Load FAISS index
-index_dir = "semantic_index"
-embedding = OpenAIEmbeddings()
-download_faiss_from_s3()
-db = FAISS.load_local(index_dir, embedding, allow_dangerous_deserialization=True)
+    for file in ["index.faiss", "pca.transform", "index.pkl"]:
+        s3.download_file(BUCKET, PREFIX + file, f"{OUT_DIR}/{file}")
 
-print("\n🧾 Sanity check — top 2 documents in FAISS:")
-doc_ids = list(db.docstore._dict.keys())[:2]
-for i, doc_id in enumerate(doc_ids):
-    doc = db.docstore._dict[doc_id]
-    print(f"\n[{i+1}] complaint_id: {doc.metadata.get('complaint_id')}")
-    print(doc.page_content[:500])
+download_artifacts()
 
-# === Accept user query
+# === Load
+index = faiss.read_index(INDEX_PATH)
+pca = faiss.read_VectorTransform(PCA_PATH)
+with open(PICKLE_PATH, "rb") as f:
+    data = pickle.load(f)
+texts = data["texts"]
+metadatas = data["metadata"]
+
+# === Query
+client = OpenAI()
 query = input("❓ Ask your question: ").strip()
+res = client.embeddings.create(model="text-embedding-3-large", input=[query])
+query_vec = np.array(res.data[0].embedding, dtype=np.float32).reshape(1, -1)  # already normed
+query_pca = pca.apply_py(query_vec)
+query_pca = normalize(query_pca, axis=1)  # must normalize after PCA
 
-query_vector = embedding.embed_query(query)
-# === Search top-k from normalized FAISS index
+# === Search
 k = 5
-scores, indices = db.index.search(np.array([query_vector]), k)
+scores, indices = index.search(query_pca, k)
 print(f"\n🔥 Max similarity score: {max(scores[0]):.4f}")
 
-# === Apply similarity threshold to filter results
 THRESHOLD = 0.5
 filtered = [
-    (db.docstore._dict[db.index_to_docstore_id[i]], scores[0][idx])
-    for idx, i in enumerate(indices[0])
-    if scores[0][idx] >= THRESHOLD
+    (texts[i], metadatas[i], scores[0][rank])
+    for rank, i in enumerate(indices[0])
+    if scores[0][rank] >= THRESHOLD
 ]
 
-# === Guardrail: No high-similarity matches
 if not filtered:
     print("\n⚠️ No relevant context found (score below threshold). LLM will not be called.")
     print("🧠 LLM Response: I'm sorry, I couldn't find enough relevant information to answer that.")
     exit()
 
-# === Log retrieved chunks with similarity scores
-print("\n🔍 Top Matches (cosine score ≥ 0.75):")
-for i, (doc, score) in enumerate(filtered):
-    print(f"\n[{i+1}] Score: {score:.4f}")
-    print(doc.page_content)
+# === Show matches
+print("\n🔍 Top Matches:")
+for i, (text, meta, score) in enumerate(filtered):
+    print(f"\n[{i+1}] complaint_id: {meta['complaint_id']} | Score: {score:.4f}")
+    print(text[:500])
 
-# === Inject top-k chunks into LLM prompt
-context = "\n".join([doc.page_content for doc, _ in filtered])
-
-from openai import OpenAI
-client = OpenAI()
-
+# === LLM
+context = "\n".join([text for text, _, _ in filtered])
 response = client.chat.completions.create(
     model="gpt-3.5-turbo",
     messages=[
