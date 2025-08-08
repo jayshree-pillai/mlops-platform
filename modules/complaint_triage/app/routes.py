@@ -2,10 +2,11 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, validator
 from sklearn.preprocessing import normalize
 from prometheus_client import Histogram, Counter, generate_latest, CONTENT_TYPE_LATEST
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
 from openai import OpenAI, RateLimitError, APIError
 import boto3, os, time, hashlib, redis, json
+import pickle
+import numpy as np
+import faiss
 
 router = APIRouter()
 client = OpenAI()
@@ -15,14 +16,18 @@ rds = redis.Redis(host="localhost", port=6379, db=0)
 BUCKET = "complaint-classifier-jp2025"
 PREFIX = "rag/semantic_index/"
 OUT_DIR = "semantic_index"
-THRESHOLD = 0.75
+INDEX_PATH = f"{OUT_DIR}/index.faiss"
+PCA_PATH = f"{OUT_DIR}/pca.transform"
+PICKLE_PATH = f"{OUT_DIR}/index.pkl"
+THRESHOLD = 0.35
 TOP_K = 5
 
 # === Version Tags ===
-FAISS_VERSION = "faiss-v1.3-2025-08-05"
-CHUNK_VERSION = "token-chunk-v1.0"
-PROMPT_VERSION = "prompt-v1.2"
-MODEL_VERSION = "gpt-3.5-turbo"
+FAISS_VERSION = "faiss-pca-v2.0-2025-08-07"       # uses PCA + cosine norm
+CHUNK_VERSION = "token-chunk-v1.0"                # same 200/100 token chunking
+PROMPT_VERSION = "prompt-v1.2"                    # same LLM prompt structure
+MODEL_VERSION = "text-embedding-3-large + gpt-3.5-turbo"
+
 
 # === Prometheus Metrics ===
 ASK_LATENCY = Histogram("rag_ask_latency_seconds", "Latency of /ask request")
@@ -42,10 +47,14 @@ def download_faiss_from_s3():
         path = os.path.join(OUT_DIR, file)
         s3.download_file(BUCKET, PREFIX + file, path)
 
-# === Load FAISS ===
+# === Load FAISS + PCA + Metadata ===
 download_faiss_from_s3()
-embedding = OpenAIEmbeddings()
-db = FAISS.load_local(OUT_DIR, embedding, allow_dangerous_deserialization=True)
+index = faiss.read_index(INDEX_PATH)
+pca = faiss.read_VectorTransform(PCA_PATH)
+with open(PICKLE_PATH, "rb") as f:
+    data = pickle.load(f)
+texts = data["texts"]
+metadatas = data["metadata"]
 
 # === Request Schema ===
 class AskRequest(BaseModel):
@@ -55,13 +64,12 @@ class AskRequest(BaseModel):
         if not v.strip():
             raise ValueError("Query cannot be empty")
         return v.strip()
-
 # === OpenAI Retry Logic ===
 def safe_openai_call(messages, retries=3):
     for i in range(retries):
         try:
             return client.chat.completions.create(
-                model=MODEL_VERSION,
+                model="gpt-3.5-turbo",
                 messages=messages
             )
         except (RateLimitError, APIError):
@@ -85,26 +93,24 @@ def ask(payload: AskRequest):
     ASK_COUNT.inc()
     try:
         query = payload.query
-        query_vector = embedding.embed_query(query)
-        norm_query = normalize([query_vector])[0]
+        res = client.embeddings.create(model="text-embedding-3-large", input=[query])
+        query_vec = np.array(res.data[0].embedding, dtype=np.float32).reshape(1, -1)
+        query_pca = pca.apply_py(query_vec)
+        query_pca = normalize(query_pca, axis=1)
 
-        scores, indices = db.index.search([norm_query], k=TOP_K)
+        scores, indices = index.search(query_pca, TOP_K)
         filtered = [
-            (db.docstore._dict[db.index_to_docstore_id[i]], scores[0][idx])
-            for idx, i in enumerate(indices[0])
-            if scores[0][idx] >= THRESHOLD
+            (texts[i], metadatas[i], scores[0][rank])
+            for rank, i in enumerate(indices[0])
+            if scores[0][rank] >= THRESHOLD
         ]
 
         if not filtered:
             ASK_FAIL.inc()
             return {"llm_answer": "I don't have enough information to answer that."}
 
-        for i, (doc, score) in enumerate(filtered):
-            print(f"[{i+1}] score={score:.4f} :: {doc.metadata.get('complaint_id', 'n/a')}")
-            print(doc.page_content[:300])
-
-        context = "\n".join([doc.page_content for doc, _ in filtered])
-        context_ids = "|".join([doc.metadata.get("complaint_id", f"doc{i}") for i, (doc, _) in enumerate(filtered)])
+        context = "\n".join([text for text, _, _ in filtered])
+        context_ids = "|".join([meta["complaint_id"] for _, meta, _ in filtered])
         RETRIEVED_CONTEXT_TOKENS.observe(len(context.split()))
 
         cache_key = hashlib.sha256(f"{query}::{context_ids}".encode()).hexdigest()
@@ -114,13 +120,14 @@ def ask(payload: AskRequest):
             return {"llm_answer": cached.decode()}
 
         CACHE_MISS.inc()
-
         start = time.time()
+
         system_prompt = f"You are a helpful complaints assistant. [meta] retrieval={FAISS_VERSION}, chunking={CHUNK_VERSION}, prompt={PROMPT_VERSION}, model={MODEL_VERSION}"
         response = safe_openai_call([
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
         ])
+
         elapsed = time.time() - start
         LLM_LATENCY.observe(elapsed)
 
