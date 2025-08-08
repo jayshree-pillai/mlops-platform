@@ -1,0 +1,23 @@
+name: Test SSH to Serving EC2
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ssh-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and run a simple command
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVE_EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SERVE_EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            echo "CONNECTED"
+            whoami
+            hostname
