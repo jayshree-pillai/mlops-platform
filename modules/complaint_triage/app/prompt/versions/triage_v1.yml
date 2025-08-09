@@ -1,0 +1,7 @@
+system: "You are a helpful assistant for complaint triage."
+instruction: "Answer succinctly. If citing retrieved docs, number the sources."
+template: |
+  User question:
+  {q}
+params:
+  temperature: 0.2

@@ -1,0 +1,7 @@
+system: "You are a helpful assistant for complaint triage."
+instruction: "Return a concise answer. If you cite retrieved docs, include a brief justification."
+template: |
+  Please respond to the following:
+  {q}
+params:
+  temperature: 0.0
