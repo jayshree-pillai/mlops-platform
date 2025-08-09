@@ -43,25 +43,31 @@ jobs:
       - name: Parse manifest and sync artifacts from S3
         run: |
           set -euo pipefail
+          
           MANIFEST_PATH=$(jq -r '.manifest_path' /tmp/faiss_lookup.json)
           echo "Using manifest at: $MANIFEST_PATH"
           cat "$MANIFEST_PATH"
-
+          
           S3_PREFIX=$(jq -r '.s3_prefix' "$MANIFEST_PATH")
           VERSION=$(jq -r '.version' "$MANIFEST_PATH")
           FILES=$(jq -r '.files[]' "$MANIFEST_PATH")
-
-          TARGET="$LOCAL_BASE/versions/$VERSION"
-          # create as root, then hand ownership to the runner user
-          sudo mkdir -p "$TARGET"
+          
+          # Make sure the base dir exists and is owned by the runner user
+          sudo mkdir -p "$LOCAL_BASE"
           sudo chown -R "$USER":"$USER" "$LOCAL_BASE"
-
+          
+          TARGET="$LOCAL_BASE/versions/$VERSION"
+          mkdir -p "$TARGET"
+          
+          # Pull the files listed in the manifest
           for f in $FILES; do
             aws s3 cp "${S3_PREFIX}${f}" "$TARGET/$f"
           done
-
-          ln -sfn "versions/$VERSION" "$LOCAL_BASE/current"
-          echo "$VERSION" > "$LOCAL_BASE/current/version.txt" 
+          
+          # Point 'current' to the version directory (ensure it's a symlink, not a folder)
+          rm -rf "$LOCAL_BASE/current"
+          ln -sfnT "versions/$VERSION" "$LOCAL_BASE/current"
+          echo "$VERSION" > "$LOCAL_BASE/current/version.txt"
 
       - name: Restart API
         run: |
