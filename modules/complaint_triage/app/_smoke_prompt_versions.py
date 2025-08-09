@@ -1,6 +1,6 @@
 from modules.complaint_triage.prompt.prompt_versioning import load_prompt
 
-base = "modules/complaint_triage/prompt/versions"
+base = "prompt/versions"
 p1 = load_prompt(f"{base}/triage_v1.yml")
 p2 = load_prompt(f"{base}/triage_v2.yml")
 
