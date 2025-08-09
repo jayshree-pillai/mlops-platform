@@ -9,17 +9,12 @@ on:
 
 jobs:
   deploy:
-    # Runs ON the serving EC2 via your self-hosted runner
-    runs-on: [self-hosted, ml, ec2]
+    runs-on: [self-hosted, ml, ec2]   # labels on your SERVING runner
 
     env:
-      # MLflow tracking server (you set this secret already)
-      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_URL }}
-      # Experiment is fixed as you asked
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_URL }}   # e.g. http://172.31.82.103:5000
       EXPERIMENT_NAME: complaint-embeddings
-      # Local artifact base on the serving box
       LOCAL_BASE: /srv/rag-api/artifacts/faiss
-      # Systemd unit to restart
       SERVICE_NAME: rag-api
 
     steps:
@@ -42,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           . .venv/bin/activate
-          python - <<'PY'
+          python - <<'PY' > /tmp/faiss_lookup.json
 import os, sys, json, pathlib
 from mlflow.tracking import MlflowClient
 
@@ -71,11 +66,10 @@ out_dir = "/tmp/faiss_manifest"
 pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
 manifest_path = client.download_artifacts(run.info.run_id, "faiss/manifest.json", out_dir)
 
-# Persist for the next step
-with open("/tmp/faiss_lookup.json", "w") as f:
-    json.dump({"manifest_path": manifest_path}, f)
-print(f"manifest_path={manifest_path}")
+print(json.dumps({"manifest_path": manifest_path}))
 PY
+          echo "Lookup JSON:"
+          cat /tmp/faiss_lookup.json
 
       - name: Parse manifest and sync artifacts from S3
         run: |
@@ -95,7 +89,6 @@ PY
             aws s3 cp "${S3_PREFIX}${f}" "$TARGET/$f"
           done
 
-          # Flip alias 'current' exactly as you want
           sudo ln -sfn "versions/$VERSION" "$LOCAL_BASE/current"
           echo "$VERSION" | sudo tee "$LOCAL_BASE/current/version.txt" >/dev/null
 
