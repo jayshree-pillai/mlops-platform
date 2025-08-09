@@ -1,0 +1,109 @@
+name: Deploy FAISS to Serving from MLflow (by run_name)
+on:
+  workflow_dispatch:
+    inputs:
+      run_name:
+        description: "MLflow run_name (e.g., faiss-pca-v2.0-2025-08-08)"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    # Runs ON the serving EC2 via your self-hosted runner
+    runs-on: [self-hosted, ml, ec2]
+
+    env:
+      # MLflow tracking server (you set this secret already)
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_URL }}
+      # Experiment is fixed as you asked
+      EXPERIMENT_NAME: complaint-embeddings
+      # Local artifact base on the serving box
+      LOCAL_BASE: /srv/rag-api/artifacts/faiss
+      # Systemd unit to restart
+      SERVICE_NAME: rag-api
+
+    steps:
+      - name: Ensure tools
+        run: |
+          set -e
+          if ! command -v aws >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y awscli
+          fi
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip mlflow boto3
+
+      - name: Resolve MLflow run & download manifest.json
+        env:
+          RUN_NAME: ${{ inputs.run_name }}
+        run: |
+          set -euo pipefail
+          . .venv/bin/activate
+          python - <<'PY'
+import os, sys, json, pathlib
+from mlflow.tracking import MlflowClient
+
+uri = os.environ["MLFLOW_TRACKING_URI"]
+exp_name = os.environ["EXPERIMENT_NAME"]
+run_name = os.environ["RUN_NAME"]
+
+client = MlflowClient(tracking_uri=uri)
+exp = client.get_experiment_by_name(exp_name)
+if exp is None:
+    print(f"ERROR: experiment not found: {exp_name}", file=sys.stderr)
+    sys.exit(2)
+
+runs = client.search_runs(
+    [exp.experiment_id],
+    f"attributes.run_name = '{run_name}'",
+    order_by=["attributes.start_time DESC"],
+    max_results=1
+)
+if not runs:
+    print(f"ERROR: run_name not found: {run_name}", file=sys.stderr)
+    sys.exit(3)
+
+run = runs[0]
+out_dir = "/tmp/faiss_manifest"
+pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
+manifest_path = client.download_artifacts(run.info.run_id, "faiss/manifest.json", out_dir)
+
+# Persist for the next step
+with open("/tmp/faiss_lookup.json", "w") as f:
+    json.dump({"manifest_path": manifest_path}, f)
+print(f"manifest_path={manifest_path}")
+PY
+
+      - name: Parse manifest and sync artifacts from S3
+        run: |
+          set -euo pipefail
+          MANIFEST_PATH=$(jq -r '.manifest_path' /tmp/faiss_lookup.json)
+          echo "Using manifest at: $MANIFEST_PATH"
+          cat "$MANIFEST_PATH"
+
+          S3_PREFIX=$(jq -r '.s3_prefix' "$MANIFEST_PATH")
+          VERSION=$(jq -r '.version' "$MANIFEST_PATH")
+          FILES=$(jq -r '.files[]' "$MANIFEST_PATH")
+
+          TARGET="$LOCAL_BASE/versions/$VERSION"
+          sudo mkdir -p "$TARGET"
+
+          for f in $FILES; do
+            aws s3 cp "${S3_PREFIX}${f}" "$TARGET/$f"
+          done
+
+          # Flip alias 'current' exactly as you want
+          sudo ln -sfn "versions/$VERSION" "$LOCAL_BASE/current"
+          echo "$VERSION" | sudo tee "$LOCAL_BASE/current/version.txt" >/dev/null
+
+      - name: Restart API
+        run: |
+          sudo systemctl restart "$SERVICE_NAME" || true
+          sleep 2
+          sudo systemctl is-active "$SERVICE_NAME" || true
+
+      - name: Done
+        run: echo "✅ Deployed $(cat $LOCAL_BASE/current/version.txt)"

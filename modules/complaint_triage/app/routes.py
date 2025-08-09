@@ -7,23 +7,32 @@ import boto3, os, time, hashlib, redis, json
 import pickle
 import numpy as np
 import faiss
-
+from pathlib import Path
 router = APIRouter()
 client = OpenAI()
 rds = redis.Redis(host="localhost", port=6379, db=0)
 
 # === Constants ===
 BUCKET = "complaint-classifier-jp2025"
-PREFIX = "rag/semantic_index/"
-OUT_DIR = "semantic_index"
-INDEX_PATH = f"{OUT_DIR}/index.faiss"
-PCA_PATH = f"{OUT_DIR}/pca.transform"
-PICKLE_PATH = f"{OUT_DIR}/index.pkl"
+
+
+# Read artifacts from CI-deployed dir (symlink -> versions/<VERSION>)
+ARTIFACT_DIR = os.environ.get("ARTIFACT_DIR", "/srv/rag-api/artifacts/faiss/current")
+PREFIX = "rag/semantic_index/current/"    # S3 bootstrap alias
+
+OUT_DIR = ARTIFACT_DIR                    # keep your existing var usage
+INDEX_PATH = os.path.join(OUT_DIR, "index.faiss")
+PCA_PATH = os.path.join(OUT_DIR, "pca.transform")
+PICKLE_PATH = os.path.join(OUT_DIR, "index.pkl")
+
 THRESHOLD = 0.35
 TOP_K = 5
 
-# === Version Tags ===
-FAISS_VERSION = "faiss-pca-v2.0-2025-08-07"       # uses PCA + cosine norm
+# === Version Tags (read from version.txt if present) ===
+try:
+    FAISS_VERSION = Path(os.path.join(OUT_DIR, "version.txt")).read_text().strip()
+except Exception:
+    FAISS_VERSION = "unknown"
 CHUNK_VERSION = "token-chunk-v1.0"                # same 200/100 token chunking
 PROMPT_VERSION = "prompt-v1.2"                    # same LLM prompt structure
 MODEL_VERSION = "text-embedding-3-large + gpt-3.5-turbo"
@@ -43,9 +52,13 @@ CACHE_MISS = Counter("rag_cache_misses", "Redis cache misses")
 def download_faiss_from_s3():
     s3 = boto3.client("s3")
     os.makedirs(OUT_DIR, exist_ok=True)
-    for file in ["index.faiss", "index.pkl"]:
+    for file in ["index.faiss", "pca.transform", "index.pkl", "manifest.json", "version.txt"]:
         path = os.path.join(OUT_DIR, file)
-        s3.download_file(BUCKET, PREFIX + file, path)
+        try:
+            s3.download_file(BUCKET, PREFIX + file, path)
+        except Exception as e:
+            # bootstrap is best-effort; local deploy may already have files
+            print(f"bootstrap skip {file}: {e}")
 
 # === Load FAISS + PCA + Metadata ===
 download_faiss_from_s3()
@@ -79,7 +92,17 @@ def safe_openai_call(messages, retries=3):
 ### ---------- Health ---------- ###
 @router.get("/health")
 def health():
-    return {"status": "ok"}
+    have = {
+        "index.faiss": os.path.exists(INDEX_PATH),
+        "pca.transform": os.path.exists(PCA_PATH),
+        "index.pkl": os.path.exists(PICKLE_PATH),
+    }
+    return {
+        "status": "ok" if all(have.values()) else "degraded",
+        "artifacts_present": have,
+        "artifact_dir": OUT_DIR,
+        "faiss_version": FAISS_VERSION,
+    }
 
 ### ---------- Metrics ---------- ###
 @router.get("/metrics")
@@ -95,6 +118,9 @@ def ask(payload: AskRequest):
         query = payload.query
         res = client.embeddings.create(model="text-embedding-3-large", input=[query])
         query_vec = np.array(res.data[0].embedding, dtype=np.float32).reshape(1, -1)
+
+        # match build pipeline: normalize -> PCA -> normalize
+        query_vec = normalize(query_vec, axis=1)
         query_pca = pca.apply_py(query_vec)
         query_pca = normalize(query_pca, axis=1)
 
