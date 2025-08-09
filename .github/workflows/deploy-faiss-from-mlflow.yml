@@ -31,7 +31,7 @@ jobs:
           fi
           python3 -m venv .venv
           . .venv/bin/activate
-          pip install --upgrade pip mlflow boto3
+          pip install --upgrade pip mlflow boto3 requests
 
       - name: Resolve MLflow run & download manifest.json
         run: |
