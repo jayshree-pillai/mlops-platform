@@ -52,14 +52,16 @@ jobs:
           FILES=$(jq -r '.files[]' "$MANIFEST_PATH")
 
           TARGET="$LOCAL_BASE/versions/$VERSION"
+          # create as root, then hand ownership to the runner user
           sudo mkdir -p "$TARGET"
+          sudo chown -R "$USER":"$USER" "$LOCAL_BASE"
 
           for f in $FILES; do
             aws s3 cp "${S3_PREFIX}${f}" "$TARGET/$f"
           done
 
-          sudo ln -sfn "versions/$VERSION" "$LOCAL_BASE/current"
-          echo "$VERSION" | sudo tee "$LOCAL_BASE/current/version.txt" >/dev/null
+          ln -sfn "versions/$VERSION" "$LOCAL_BASE/current"
+          echo "$VERSION" > "$LOCAL_BASE/current/version.txt" 
 
       - name: Restart API
         run: |
