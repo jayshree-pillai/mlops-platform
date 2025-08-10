@@ -5,7 +5,11 @@ Context:
 - {{ c }}
 {% endfor %}
 
-Instruction: Summarize the user's issue in 3 crisp bullet points using ONLY the context.
+Instruction:
+If the retrieved context is relevant to the query, summarize the user's issue in 3 crisp bullet points using ONLY the context.
+If the retrieved context is unrelated or insufficient to answer the query, respond exactly:
+{"bullets": [], "confidence": 0.0, "note": "No relevant information found"}
+Do not use outside knowledge to answer.
 Formatting:
 - Output JSON ONLY with keys: bullets (list[str]), confidence (0..1).
 

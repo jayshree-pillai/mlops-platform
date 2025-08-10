@@ -25,6 +25,10 @@ def main():
     ap.add_argument("--k", type=int, default=None, help="Top-K contexts (override)")
     ap.add_argument("--temp", type=float, default=None, help="LLM temperature override")
     ap.add_argument("--json", action="store_true", help="Print only JSON result")
+    ap.add_argument("--min-avg-top3", type=float, default=0.30, help="Low-confidence avg_top3 threshold")
+    ap.add_argument("--min-margin", type=float, default=0.03, help="Low-confidence margin threshold")
+    ap.add_argument("--min-keep", type=float, default=0.20, help="Very low bar to keep any hit")
+
     args = ap.parse_args()
 
     # 1) Load prompt spec
@@ -40,6 +44,38 @@ def main():
     contexts = [t for (t, meta, score) in hits]
     ctx_meta = [{"score": score, **(meta or {})} for (t, meta, score) in hits]
 
+    # --- Retrieval quality signals ---
+    top_scores = [score for (_, _, score) in hits[:3]]  # top 3 scores
+    avg_top3 = sum(top_scores) / len(top_scores) if top_scores else 0.0
+    margin = top_scores[0] - top_scores[1] if len(top_scores) >= 2 else 0.0
+    low_confidence = (avg_top3 < args.min_avg_top3 and margin < args.min_margin)
+    # --- Early return on clearly off-topic retrievals ---
+    # Keep low-but-relevant: only skip if there are NO hits above a very low bar
+    min_keep = args.min_keep
+    has_any_relevant = any(score >= min_keep for (_, _, score) in hits)
+    if not hits or (low_confidence and not has_any_relevant):
+        # Refuse gracefully without calling the LLM
+        refusal = {"bullets": [], "confidence": 0.0, "note": "No relevant information found"}
+        out = {
+            "answer": json.dumps(refusal, ensure_ascii=False),
+            "prompt_version": spec.name,
+            "llm_model": None,
+            "model_version": None,
+            "low_confidence": True,
+            "retrieval_stats": {
+                "avg_top3": avg_top3,
+                "margin": margin
+            },
+            "retriever": {
+                "faiss_version": retriever.version,
+                "ntotal": retriever.info()["ntotal"],
+                "k": k,
+                "hits": [{"text": t, "meta": m} for t, m in zip(contexts, ctx_meta)],
+            },
+            "timing_tokens": {}
+        }
+        print(json.dumps(out if args.json else out, ensure_ascii=False, indent=None if args.json else 2))
+        return
     # 3) Render Jinja with few-shots (if any)
     user_prompt = render_template(
         spec.jinja,
@@ -69,6 +105,11 @@ def main():
         "prompt_version": spec.name,
         "llm_model": info["model"],
         "model_version": info["model_version"],
+        "low_confidence": low_confidence,
+        "retrieval_stats": {
+            "avg_top3": avg_top3,
+            "margin": margin
+        },
         "retriever": {
             "faiss_version": retriever.version,
             "ntotal": retriever.info()["ntotal"],
