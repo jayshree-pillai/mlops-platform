@@ -1,0 +1,19 @@
+Query: {{ query }}
+
+Context:
+{% for c in contexts %}
+- {{ c }}
+{% endfor %}
+
+Instruction: Summarize the user's issue in 3 crisp bullet points using ONLY the context.
+Formatting:
+- Output JSON ONLY with keys: bullets (list[str]), confidence (0..1).
+
+Few-shot examples (for style/format only, do not copy content):
+{% for ex in few_shots %}
+- USER: {{ ex.user }}
+  CONTEXTS:
+  {% for ec in ex.contexts %}  - {{ ec }}
+  {% endfor %}
+  OUTPUT: {{ ex.output }}
+{% endfor %}

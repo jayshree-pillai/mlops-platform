@@ -1,0 +1,4 @@
+labels: ["credit_reporting","debt_collection","mortgages","credit_card","retail_banking"]
+thresholds:
+  billing_issue: 0.55
+  fraud: 0.6

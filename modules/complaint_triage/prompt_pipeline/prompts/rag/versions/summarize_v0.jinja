@@ -1,0 +1,9 @@
+Query: {{ query }}
+
+Context:
+{% for c in contexts %}
+- {{ c }}
+{% endfor %}
+
+Instruction: Summarize the key issue in 3 concise bullet points.
+Return JSON: {"bullets": ["...", "...", "..."], "confidence": 0.0-1.0}

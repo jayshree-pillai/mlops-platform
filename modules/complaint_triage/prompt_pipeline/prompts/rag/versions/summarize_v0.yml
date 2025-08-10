@@ -1,0 +1,22 @@
+name: summarize_v0
+task: rag
+version: 1.0.0
+model: gpt-3.5-turbo
+top_k: 4
+temperature: 0.2
+jinja_template: summarize_v0.jinja
+
+system: |
+  You are a precise assistant. Answer ONLY using the provided context.
+  If the context is insufficient, say "insufficient context."
+
+# no few-shots in v0 – baseline
+
+output_schema: json
+guardrails:
+  max_tokens_out: 250
+  must_include: []
+  must_not_include: []
+metadata:
+  owner: jay
+  notes: "Baseline RAG summarizer without few-shots."

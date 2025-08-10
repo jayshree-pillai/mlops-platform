@@ -1,0 +1,24 @@
+name: text2sql_v1_fewshot
+task: text2sql
+schema_hint: |
+  Tables: complaints(id, created_at, channel, category, amount)
+          refunds(id, complaint_id, status, refunded_at, amount)
+  Dialect: PostgreSQL 13
+template: |
+  Convert the QUESTION to SQL over the given schema. Output ONLY SQL.
+  QUESTION: {{query}}
+  SCHEMA:
+  {{ schema_hint }}
+
+few_shots:
+  - user: "count refunds last 7 days"
+    output: |
+      SELECT COUNT(*) FROM refunds
+      WHERE refunded_at >= NOW() - INTERVAL '7 days';
+  - user: "top 3 complaint categories by amount"
+    output: |
+      SELECT category, SUM(amount) AS total
+      FROM complaints
+      GROUP BY category
+      ORDER BY total DESC
+      LIMIT 3;

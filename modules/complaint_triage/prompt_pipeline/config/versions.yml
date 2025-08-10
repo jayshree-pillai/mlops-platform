@@ -1,0 +1,3 @@
+rag: summarize_v1_fewshot
+classify: classify_v1_llm_rag
+text2sql: text2sql_v1_fewshot

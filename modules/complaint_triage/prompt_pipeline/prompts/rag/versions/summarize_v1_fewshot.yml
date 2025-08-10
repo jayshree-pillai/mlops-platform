@@ -1,0 +1,43 @@
+name: summarize_v1_fewshot
+task: rag
+version: 1.1.0
+model: gpt-3.5-turbo
+top_k: 5
+temperature: 0.2
+jinja_template: summarize_v1_fewshot.jinja
+
+system: |
+  You are a precise assistant. Answer ONLY with facts grounded in the provided context.
+  If information is missing, say "insufficient context."
+  Keep outputs terse and non-repetitive.
+
+few_shots:
+  - user: "Refund failed after dispute"
+    contexts:
+      - "Customer initiated chargeback; later reversed by bank."
+      - "Merchant refund queued but reversal unsettled."
+    output: |
+      {"bullets": [
+        "Refund reversed during chargeback process",
+        "Outstanding balance remains",
+        "Escalate to billing operations"
+      ], "confidence": 0.86}
+
+  - user: "Card keeps getting declined online"
+    contexts:
+      - "Multiple AVS mismatches on international merchant."
+    output: |
+      {"bullets": [
+        "AVS mismatch triggers risk decline",
+        "Cross‑border rules likely blocking",
+        "Verify billing address with bank"
+      ], "confidence": 0.84}
+
+output_schema: json
+guardrails:
+  max_tokens_out: 250
+  must_include: []
+  must_not_include: []
+metadata:
+  owner: jay
+  notes: "Few-shot tuned for customer complaint summaries."

@@ -1,0 +1,7 @@
+artifact_dir_env: ARTIFACT_DIR
+default_artifact_dir: /srv/rag-api/artifacts/faiss/current
+embedding_model: text-embedding-3-large
+llm_model: gpt-3.5-turbo
+model_version: "text-embedding-3-large + gpt-3.5-turbo"
+default_top_k: 4
+default_temperature: 0.2

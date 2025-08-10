@@ -1,0 +1,19 @@
+name: classify_v1_llm_rag
+task: classify
+labels: ["billing_issue","fraud","card_decline","transfer","other"]
+decision_rule: "argmax"               # or threshold map
+template: |
+  Given the CUSTOMER MESSAGE and CONTEXT, choose one label from {{ labels }}.
+  Return JSON: {"label": "...", "score": 0..1, "rationale": "..."}.
+
+  CUSTOMER MESSAGE: {{query}}
+  CONTEXT:
+  {% for c in contexts %}- {{ c }}{% endfor %}
+
+few_shots:
+  - user: "Customer was billed twice."
+    contexts: ["Duplicate charge on 05/02 and 05/03."]
+    output: '{"label":"billing_issue","score":0.92,"rationale":"duplicate charge"}'
+  - user: "Card declined at gas station"
+    contexts: ["Risk rule block on MCC 5541."]
+    output: '{"label":"card_decline","score":0.88,"rationale":"risk rule"}'
