@@ -1,0 +1,4 @@
+faithfulness_min: 0.70
+format_error_max: 0.02
+bad_refusal_max: 0.05
+sample_for_audit: 25

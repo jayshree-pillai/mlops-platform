@@ -1,0 +1,6 @@
+gpt-3.5-turbo:
+  input_per_1k: 0.00   # fill with your internal rate card if you track; or leave 0.0
+  output_per_1k: 0.00
+gpt-4o-mini:
+  input_per_1k: 0.00
+  output_per_1k: 0.00

@@ -28,6 +28,7 @@ def main():
     ap.add_argument("--min-avg-top3", type=float, default=0.30, help="Low-confidence avg_top3 threshold")
     ap.add_argument("--min-margin", type=float, default=0.03, help="Low-confidence margin threshold")
     ap.add_argument("--min-keep", type=float, default=0.20, help="Very low bar to keep any hit")
+    ap.add_argument("--drop-top", type=int, default=0, help="Drop top N retrieved chunks before prompting")
 
     args = ap.parse_args()
 
@@ -41,6 +42,8 @@ def main():
     retriever = get_retriever()
     k = args.k or spec.top_k or 4
     hits = retriever.retrieve(args.q, k=k)
+    if args.drop_top > 0:
+        hits = hits[args.drop_top:]
     contexts = [t for (t, meta, score) in hits]
     ctx_meta = [{"score": score, **(meta or {})} for (t, meta, score) in hits]
 
@@ -65,6 +68,12 @@ def main():
             "retrieval_stats": {
                 "avg_top3": avg_top3,
                 "margin": margin
+            },
+            "lineage": {
+                "prompt_version": spec.name,
+                "topk": k,
+                "temperature": args.temp if args.temp is not None else spec.temperature,
+                "gen_model": spec.model
             },
             "retriever": {
                 "faiss_version": retriever.version,
@@ -109,6 +118,12 @@ def main():
         "retrieval_stats": {
             "avg_top3": avg_top3,
             "margin": margin
+        },
+        "lineage": {
+            "prompt_version": spec.name,
+            "topk": k,
+            "temperature": args.temp if args.temp is not None else spec.temperature,
+            "gen_model": info["model"]
         },
         "retriever": {
             "faiss_version": retriever.version,

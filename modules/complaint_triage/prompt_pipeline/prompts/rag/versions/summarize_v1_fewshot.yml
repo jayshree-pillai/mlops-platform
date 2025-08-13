@@ -8,7 +8,8 @@ jinja_template: summarize_v1_fewshot.jinja
 
 system: |
   You are a precise assistant. Answer ONLY with facts grounded in the provided context.
-  If information is missing, say "insufficient context."
+  Return STRICT JSON only. If the context is insufficient or irrelevant, return exactly:
+  {"bullets": [], "evidence": [], "confidence": 0.0, "note": "No relevant information found"}
   Keep outputs terse and non-repetitive.
 
 few_shots:
@@ -19,19 +20,20 @@ few_shots:
     output: |
       {"bullets": [
         "Refund reversed during chargeback process",
-        "Outstanding balance remains",
+        "Reversal unsettled; refund not posted",
         "Escalate to billing operations"
-      ], "confidence": 0.86}
+      ], "evidence": [[1],[2],[2]], "confidence": 0.86}
 
   - user: "Card keeps getting declined online"
     contexts:
       - "Multiple AVS mismatches on international merchant."
+      - "Bank flags repeated cross-border attempts."
     output: |
       {"bullets": [
-        "AVS mismatch triggers risk decline",
-        "Cross‑border rules likely blocking",
+        "AVS mismatches trigger risk declines",
+        "Cross-border rules likely blocking",
         "Verify billing address with bank"
-      ], "confidence": 0.84}
+      ], "evidence": [[1],[2],[1,2]], "confidence": 0.84}
 
 output_schema: json
 guardrails:

@@ -22,6 +22,8 @@ def load_queries(path: Path):
 def run_one(query, version, k, temp, runner_path: Path, env, retries=3, backoff=1.5):
     cmd = [sys.executable, str(runner_path), "--q", query, "--version", version,
            "--k", str(k), "--temp", str(temp), "--json"]
+    if drop_top and int(drop_top) > 0:
+        cmd += ["--drop-top", str(drop_top)]
     attempt = 0
     while True:
         attempt += 1
@@ -42,14 +44,18 @@ def main():
     ap.add_argument("--batch-size", type=int, default=int(os.getenv("OPENAI_BATCH", "6")),
                     help="parallel workers; can also set OPENAI_BATCH env")
     ap.add_argument("--out", required=True, help="Output NDJSON path")
+    ap.add_argument("--drop-top", type=int, default=0, help="Drop top-N retrieved chunks before prompting")
     args = ap.parse_args()
 
     root = Path(__file__).resolve().parent
     runner = root / "runners" / "query_rag.py"
 
+    futs = [ex.submit(run_one, q, args.version, args.k, args.temp, args.drop_top, runner, env) for q in queries]
+
     # Make package importable (prompt_pipeline lives under modules/complaint_triage/)
     env = os.environ.copy()
-    env["PYTHONPATH"] = str((root / ".." / ".." / "complaint_triage").resolve())
+    pkg = str((root / ".." / ".." / "complaint_triage").resolve())
+    env["PYTHONPATH"] = (env.get("PYTHONPATH", "") + (os.pathsep if env.get("PYTHONPATH") else "") + pkg)
 
     queries = load_queries(Path(args.queries))
     print(f"[batch_run] loaded {len(queries)} queries from {args.queries}")

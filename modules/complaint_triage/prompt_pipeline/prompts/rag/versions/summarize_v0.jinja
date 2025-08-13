@@ -2,14 +2,21 @@ Query: {{ query }}
 
 Context:
 {% for c in contexts %}
-- {{ c }}
+- [{{ loop.index }}] {{ c }}
 {% endfor %}
 
 Instruction:
-If the retrieved context is relevant to the query, summarize the key issue in 3 concise bullet points.
-If the retrieved context is unrelated or insufficient to answer the query, respond exactly:
-{"bullets": [], "confidence": 0.0, "note": "No relevant information found"}
-Do not use outside knowledge to answer.
+Return STRICT JSON only (no prose). Exactly one object.
 
-Return JSON: {"bullets": ["...", "...", "..."], "confidence": 0.0-1.0}
+If the retrieved context is relevant to the query, summarize the key issue in 3 concise bullet points (≤20 words each).
 
+If the retrieved context is unrelated or insufficient to answer the query, return exactly:
+{"bullets": [], "evidence": [], "confidence": 0.0, "note": "No relevant information found"}
+
+Return JSON ONLY in this shape:
+{"bullets": ["...", "...", "..."], "evidence": [[1,2],[2],[3]], "confidence": 0.0-1.0}
+
+# Rules
+- "evidence" is an array of arrays. Each inner list contains the Context item numbers (from the bracketed [n] above)
+  that support the corresponding bullet at the same index.
+- Do not invent facts beyond the Context. If unsure, use the refusal JSON above.

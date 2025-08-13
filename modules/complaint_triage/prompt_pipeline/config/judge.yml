@@ -1,0 +1,29 @@
+model: gpt-4o-mini     # use a stronger judge than gen
+temperature: 0.0
+top_p: 1.0
+tie_policy: allow_tie    # allow_tie | break_ties_for_A
+max_context_chars: 6000  # safety cap; your code trims to this
+
+pairwise_prompt: |
+  You are a strict evaluator.
+  Compare ANSWER A vs ANSWER B using this rubric:
+  1) Faithfulness (only claims supported by CONTEXT)
+  2) Answer-Relevance (addresses the QUERY)
+  3) Context-Relevance (chosen context is pertinent)
+  Return exactly one token: A, B, or Tie.
+
+  QUERY: {{ query }}
+  CONTEXT: {{ context }}
+  ANSWER_A: {{ a }}
+  ANSWER_B: {{ b }}
+
+triad_prompt: |
+  Score each 0.0–1.0:
+  - faithfulness
+  - answer_relevance
+  - context_relevance
+  Return JSON: {"faithfulness":x,"answer_relevance":y,"context_relevance":z}
+
+  QUERY: {{ query }}
+  CONTEXT: {{ context }}
+  ANSWER: {{ ans }}

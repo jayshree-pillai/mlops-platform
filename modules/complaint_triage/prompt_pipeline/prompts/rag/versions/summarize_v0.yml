@@ -8,7 +8,8 @@ jinja_template: summarize_v0.jinja
 
 system: |
   You are a precise assistant. Answer ONLY using the provided context.
-  If the context is insufficient, say "insufficient context."
+  Return STRICT JSON only. If the context is insufficient or irrelevant, return exactly:
+  {"bullets": [], "evidence": [], "confidence": 0.0, "note": "No relevant information found"}
 
 # no few-shots in v0 – baseline
 
