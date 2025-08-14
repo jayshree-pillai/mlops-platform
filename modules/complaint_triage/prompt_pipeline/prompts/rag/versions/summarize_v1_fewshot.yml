@@ -1,45 +1,99 @@
 name: summarize_v1_fewshot
 task: rag
-version: 1.1.0
-model: gpt-3.5-turbo
-top_k: 5
-temperature: 0.2
-jinja_template: summarize_v1_fewshot.jinja
-
-system: |
-  You are a precise assistant. Answer ONLY with facts grounded in the provided context.
-  Return STRICT JSON only. If the context is insufficient or irrelevant, return exactly:
-  {"bullets": [], "evidence": [], "confidence": 0.0, "note": "No relevant information found"}
-  Keep outputs terse and non-repetitive.
-
-few_shots:
-  - user: "Refund failed after dispute"
-    contexts:
-      - "Customer initiated chargeback; later reversed by bank."
-      - "Merchant refund queued but reversal unsettled."
-    output: |
-      {"bullets": [
-        "Refund reversed during chargeback process",
-        "Reversal unsettled; refund not posted",
-        "Escalate to billing operations"
-      ], "evidence": [[1],[2],[2]], "confidence": 0.86}
-
-  - user: "Card keeps getting declined online"
-    contexts:
-      - "Multiple AVS mismatches on international merchant."
-      - "Bank flags repeated cross-border attempts."
-    output: |
-      {"bullets": [
-        "AVS mismatches trigger risk declines",
-        "Cross-border rules likely blocking",
-        "Verify billing address with bank"
-      ], "evidence": [[1],[2],[1,2]], "confidence": 0.84}
-
+version: summarize_v1_fewshot
+model: gpt-4o-mini
+top_k: 4
+temperature: 0.0
 output_schema: json
-guardrails:
-  max_tokens_out: 250
-  must_include: []
-  must_not_include: []
-metadata:
-  owner: jay
-  notes: "Few-shot tuned for customer complaint summaries."
+system: 'You are a complaint-triage assistant. Use ONLY the provided Sources. Return
+  exactly ONE JSON with fields: bullets, evidence, confidence. Cite only from Sources;
+  refuse cleanly if insufficient.'
+few_shots:
+- id: '132732'
+  label: straightforward
+  query: late payment credit report make credit report
+  sources:
+  - doc_id: D1
+    text: 'Relevant span supporting point #1.'
+  - doc_id: D2
+    text: 'Relevant span supporting point #2.'
+  json:
+    bullets:
+    - 'Succinct point #1'
+    - 'Succinct point #2'
+    evidence:
+    - doc_id: D1
+      span: short quote
+    - doc_id: D2
+      span: short quote
+    confidence: 0.8
+- id: '112418'
+  label: multi_issue
+  query: received call audio call stating call another number cash card blocked unblock
+    needed call number called another phone person answer hung feel like caller type
+    scam attempting way take money cash app original number may way people getting
+    ripped cash app checked cash app fine
+  sources:
+  - doc_id: D1
+    text: 'Relevant span supporting point #1.'
+  - doc_id: D2
+    text: 'Relevant span supporting point #2.'
+  json:
+    bullets:
+    - 'Succinct point #1'
+    - 'Succinct point #2'
+    evidence:
+    - doc_id: D1
+      span: short quote
+    - doc_id: D2
+      span: short quote
+    confidence: 0.8
+- id: '62893'
+  label: ambiguous_refusal
+  query: updated letter describing issue fair resolution issue remove
+  sources: []
+  json:
+    bullets: []
+    evidence: []
+    confidence: 0.0
+- id: '29341'
+  label: near_duplicate
+  query: victim identity notified collection creditor several time account belong
+    way received good service company provided police report ftc id theft affidavit
+    signed notarized along sworn statement regarding fraudulent account document submitted
+    credit bureau
+  sources:
+  - doc_id: D1
+    text: Overlapping span with D2 for the same detail.
+  - doc_id: D2
+    text: Complementary span that adds a minor detail.
+  json:
+    bullets:
+    - Consolidated point supported by multiple overlapping sources.
+    evidence:
+    - doc_id: D1
+      span: short quote
+    - doc_id: D2
+      span: short quote
+    confidence: 0.75
+- id: '144262'
+  label: edge_guardrail
+  query: may concern victim identity theft never authorized following inquires report
+    recently changed password stuff online avoid ever happening told friend come guy
+    since getting run around first happened back agreed remove inquiry show picture
+    transunion report showing removed since inaccurate never authorized
+  sources:
+  - doc_id: D1
+    text: 'Relevant span supporting point #1.'
+  - doc_id: D2
+    text: 'Relevant span supporting point #2.'
+  json:
+    bullets:
+    - 'Succinct point #1'
+    - 'Succinct point #2'
+    evidence:
+    - doc_id: D1
+      span: short quote
+    - doc_id: D2
+      span: short quote
+    confidence: 0.8

@@ -1,32 +1,27 @@
-Query: {{ query }}
+### Examples
+{% for fs in few_shots %}
+### Example {{ loop.index }} — {{ fs.label }}
+### Query
+{{ fs.query }}
 
-Context:
+### Sources
+{% for s in fs.sources %}
+[doc_id={{ s.doc_id }}]
+{{ s.text }}
+
+{% endfor %}
+
+### Expected JSON
+{{ fs.json | tojson }}
+
+{% endfor %}
+
+### Query
+{{ query }}
+
+### Sources
 {% for c in contexts %}
-- [{{ loop.index }}] {{ c }}
-{% endfor %}
+[doc_id={{ loop.index }}]
+{{ c }}
 
-Instruction:
-Return STRICT JSON only (no prose). Exactly one object.
-
-If the retrieved context is relevant to the query, summarize the user's issue in 3 crisp bullet points (≤20 words each) using ONLY the Context.
-
-If the retrieved context is unrelated or insufficient to answer the query, return exactly:
-{"bullets": [], "evidence": [], "confidence": 0.0, "note": "No relevant information found"}
-
-Output schema (must match exactly):
-{"bullets": ["...", "...", "..."], "evidence": [[1,2],[2],[3]], "confidence": 0.0-1.0}
-
-Rules:
-- Use only facts supported by the Context.
-- "evidence" is an array of arrays; each inner list cites the Context indices that support the bullet at the same position.
-- Do not include any text outside the JSON object.
-
-Few-shot examples (style/format only — do not copy content):
-{% for ex in few_shots %}
-- USER: {{ ex.user }}
-  CONTEXTS:
-{% for ec in ex.contexts %}
-    - [{{ loop.index }}] {{ ec }}
-{% endfor %}
-  OUTPUT: {{ ex.output }}
 {% endfor %}

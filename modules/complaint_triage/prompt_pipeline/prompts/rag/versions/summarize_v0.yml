@@ -1,23 +1,10 @@
 name: summarize_v0
 task: rag
-version: 1.0.0
-model: gpt-3.5-turbo
+version: summarize_v0
+model: gpt-4o-mini
 top_k: 4
-temperature: 0.2
-jinja_template: summarize_v0.jinja
-
-system: |
-  You are a precise assistant. Answer ONLY using the provided context.
-  Return STRICT JSON only. If the context is insufficient or irrelevant, return exactly:
-  {"bullets": [], "evidence": [], "confidence": 0.0, "note": "No relevant information found"}
-
-# no few-shots in v0 – baseline
-
+temperature: 0.0
 output_schema: json
-guardrails:
-  max_tokens_out: 250
-  must_include: []
-  must_not_include: []
-metadata:
-  owner: jay
-  notes: "Baseline RAG summarizer without few-shots."
+system: 'You are a complaint-triage assistant. Use ONLY the provided Sources. Return
+  exactly ONE JSON with fields: bullets, evidence, confidence. Cite only from Sources;
+  refuse cleanly if insufficient.'
