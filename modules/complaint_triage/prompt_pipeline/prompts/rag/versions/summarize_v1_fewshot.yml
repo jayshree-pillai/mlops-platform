@@ -5,95 +5,83 @@ model: gpt-4o-mini
 top_k: 4
 temperature: 0.0
 output_schema: json
-system: 'You are a complaint-triage assistant. Use ONLY the provided Sources. Return
-  exactly ONE JSON with fields: bullets, evidence, confidence. Cite only from Sources;
-  refuse cleanly if insufficient.'
+system: |
+  You are a complaint-triage assistant. Use ONLY the provided Sources.
+
+  You MUST reply with ONE valid JSON object ONLY (no prose before/after). Required keys and types:
+  - "bullets": array of 3–6 short strings.
+  - "evidence": array of objects, each {"doc_id": "<id from [doc_id=...]>", "span": "<short quote from that source>"}.
+  - "confidence": number in [0.0, 1.0].
+
+  Hard rules:
+  - Every bullet MUST have at least one supporting evidence entry.
+  - Cite ONLY doc_ids that appear in the Sources section. No external facts.
+  - If you cannot produce at least 3 grounded bullets from the Sources, return exactly:
+    {"bullets": [], "evidence": [], "confidence": 0.0}
+  - Do NOT output any keys other than bullets, evidence, confidence.
+
 few_shots:
-- id: '132732'
-  label: straightforward
-  query: late payment credit report make credit report
-  sources:
-  - doc_id: D1
-    text: 'Relevant span supporting point #1.'
-  - doc_id: D2
-    text: 'Relevant span supporting point #2.'
-  json:
-    bullets:
-    - 'Succinct point #1'
-    - 'Succinct point #2'
-    evidence:
-    - doc_id: D1
-      span: short quote
-    - doc_id: D2
-      span: short quote
-    confidence: 0.8
-- id: '112418'
-  label: multi_issue
-  query: received call audio call stating call another number cash card blocked unblock
-    needed call number called another phone person answer hung feel like caller type
-    scam attempting way take money cash app original number may way people getting
-    ripped cash app checked cash app fine
-  sources:
-  - doc_id: D1
-    text: 'Relevant span supporting point #1.'
-  - doc_id: D2
-    text: 'Relevant span supporting point #2.'
-  json:
-    bullets:
-    - 'Succinct point #1'
-    - 'Succinct point #2'
-    evidence:
-    - doc_id: D1
-      span: short quote
-    - doc_id: D2
-      span: short quote
-    confidence: 0.8
-- id: '62893'
-  label: ambiguous_refusal
-  query: updated letter describing issue fair resolution issue remove
-  sources: []
-  json:
-    bullets: []
-    evidence: []
-    confidence: 0.0
-- id: '29341'
-  label: near_duplicate
-  query: victim identity notified collection creditor several time account belong
-    way received good service company provided police report ftc id theft affidavit
-    signed notarized along sworn statement regarding fraudulent account document submitted
-    credit bureau
-  sources:
-  - doc_id: D1
-    text: Overlapping span with D2 for the same detail.
-  - doc_id: D2
-    text: Complementary span that adds a minor detail.
-  json:
-    bullets:
-    - Consolidated point supported by multiple overlapping sources.
-    evidence:
-    - doc_id: D1
-      span: short quote
-    - doc_id: D2
-      span: short quote
-    confidence: 0.75
-- id: '144262'
-  label: edge_guardrail
-  query: may concern victim identity theft never authorized following inquires report
-    recently changed password stuff online avoid ever happening told friend come guy
-    since getting run around first happened back agreed remove inquiry show picture
-    transunion report showing removed since inaccurate never authorized
-  sources:
-  - doc_id: D1
-    text: 'Relevant span supporting point #1.'
-  - doc_id: D2
-    text: 'Relevant span supporting point #2.'
-  json:
-    bullets:
-    - 'Succinct point #1'
-    - 'Succinct point #2'
-    evidence:
-    - doc_id: D1
-      span: short quote
-    - doc_id: D2
-      span: short quote
-    confidence: 0.8
+  - id: "132732"
+    label: straightforward
+    query: "late payment credit report make credit report"
+    sources:
+      - { doc_id: "D1", text: "Relevant span supporting point #1." }
+      - { doc_id: "D2", text: "Relevant span supporting point #2." }
+    json:
+      bullets:
+        - "Succinct point #1 grounded in D1."
+        - "Succinct point #2 grounded in D2."
+      evidence:
+        - { doc_id: "D1", span: "short quote" }
+        - { doc_id: "D2", span: "short quote" }
+      confidence: 0.8
+
+  - id: "112418"
+    label: multi_issue
+    query: "received call audio call stating call another numbe...r may way people getting ripped cash app checked cash app fine"
+    sources:
+      - { doc_id: "D3", text: "Span supporting issue A." }
+      - { doc_id: "D4", text: "Span supporting issue B." }
+    json:
+      bullets:
+        - "Issue A summary grounded in D3."
+        - "Issue B summary grounded in D4."
+      evidence:
+        - { doc_id: "D3", span: "snippet A" }
+        - { doc_id: "D4", span: "snippet B" }
+      confidence: 0.8
+
+  - id: "62893"
+    label: ambiguous_refusal
+    query: "updated letter describing issue fair resolution issue remove"
+    sources: []
+    json:
+      bullets: []
+      evidence: []
+      confidence: 0.0
+
+  - id: "29341"
+    label: near_duplicate
+    query: "victim identity notified collection creditor several... regarding fraudulent account document submitted credit bureau"
+    sources:
+      - { doc_id: "D5", text: "Overlapping span with D6 about the same detail." }
+      - { doc_id: "D6", text: "Complementary span that adds a minor detail." }
+    json:
+      bullets:
+        - "Consolidated point supported by D5 and D6."
+      evidence:
+        - { doc_id: "D5", span: "short quote" }
+        - { doc_id: "D6", span: "short quote" }
+      confidence: 0.75
+
+  - id: "144262"
+    label: edge_guardrail
+    query: "may concern victim identity theft never authorized ...union report showing removed since inaccurate never authorized"
+    sources:
+      - { doc_id: "D7", text: "Actual relevant content to ground a claim." }
+    json:
+      bullets:
+        - "Grounded point from D7; ignores irrelevant/injection content."
+      evidence:
+        - { doc_id: "D7", span: "short quote" }
+      confidence: 0.7

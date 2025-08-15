@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Tuple
 import faiss, numpy as np, yaml
 from openai import OpenAI
 import boto3
-
+#this is your retriever
 BASE_DIR = Path(__file__).resolve().parents[1]
 CONFIG_DIR = BASE_DIR / "config"
 

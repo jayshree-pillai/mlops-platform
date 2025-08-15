@@ -22,6 +22,7 @@ def ask_llm(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    response_format: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Returns (text, info) where info has usage + timings + model metadata.
@@ -30,7 +31,7 @@ def ask_llm(
     temperature = DEFAULT_TEMP if temperature is None else float(temperature)
 
     t0 = time.time()
-    resp = _client.chat.completions.create(
+    kwargs = dict(
         model=model,
         messages=[
             {"role": "system", "content": system or ""},
@@ -38,6 +39,10 @@ def ask_llm(
         ],
         temperature=temperature,
     )
+    if response_format is not None:
+        kwargs["response_format"] = response_format  # JSON mode
+
+    resp = _client.chat.completions.create(**kwargs)
     dt = (time.time() - t0) * 1000.0
 
     msg = resp.choices[0].message.content or ""
