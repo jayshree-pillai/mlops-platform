@@ -25,9 +25,9 @@ def main():
     ap.add_argument("--k", type=int, default=None, help="Top-K contexts (override)")
     ap.add_argument("--temp", type=float, default=None, help="LLM temperature override")
     ap.add_argument("--json", action="store_true", help="Print only JSON result")
-    ap.add_argument("--min-avg-top3", type=float, default=0.30, help="Low-confidence avg_top3 threshold")
-    ap.add_argument("--min-margin", type=float, default=0.03, help="Low-confidence margin threshold")
-    ap.add_argument("--min-keep", type=float, default=0.20, help="Very low bar to keep any hit")
+    ap.add_argument("--min-avg-top3", type=float, default=0.10, help="Low-confidence avg_top3 threshold")
+    ap.add_argument("--min-margin", type=float, default=0.00, help="Low-confidence margin threshold")
+    ap.add_argument("--min-keep", type=float, default=0.05, help="Very low bar to keep any hit")
     ap.add_argument("--drop-top", type=int, default=0, help="Drop top N retrieved chunks before prompting")
     args = ap.parse_args()
 
@@ -82,7 +82,7 @@ def main():
         return
 
     # Token/latency clamps
-    def _truncate_contexts(texts: List[str], max_chars=700, max_ctx=3) -> List[str]:
+    def _truncate_contexts(texts: List[str], max_chars=500, max_ctx=3) -> List[str]:
         out = []
         for t in texts[:max_ctx]:
             out.append(t if len(t) <= max_chars else t[:max_chars])
