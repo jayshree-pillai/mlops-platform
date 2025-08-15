@@ -175,7 +175,7 @@ def main():
     triplets = [(t, (meta or {}), score) for (t, meta, score) in hits]
     n = min(k, len(triplets))  # dynamic slice matches --k
     # Collapse whitespace & cap per-chunk chars to kill token bloat/p95
-    PER_CHARS = 320  # tighten further to 280 if p95 still hot
+    PER_CHARS = 280  # tighten further to 280 if p95 still hot
     contexts = [_minify(t)[:PER_CHARS] for (t, _, _) in triplets[:n]]
     ctx_meta = [{"score": s, **m} for (_, m, s) in triplets[:n]]
 
@@ -206,7 +206,7 @@ def main():
             },
             "timing_tokens": {},
         }
-        print(json.dumps(out if args.json else out, ensure_ascii=False, indent=None if args.json else 2))
+        print(json.dumps(out, ensure_ascii=False))
         return
 
     # 3) Slim few-shots aggressively (we’re allowed to “kill it for sure”)
@@ -314,7 +314,7 @@ def main():
             "total_tokens": info["total_tokens"],
         },
     }
-    print(json.dumps(out if args.json else out, ensure_ascii=False, indent=None if args.json else 2))
+    print(json.dumps(out, ensure_ascii=False))
 
 if __name__ == "__main__":
     main()
