@@ -41,26 +41,7 @@ def _force_json(s: str) -> str:
 
 _REFUSAL_PAT = re.compile(r"\b(cannot|can[’']?t|unable|insufficient|no relevant|not enough|unknown|unavailable|sorry)\b", re.I)
 
-def _guarantee_bullets(json_text: str, contexts: List[str]) -> str:
-    """If bullets are empty or refusal-ish, synthesize 1 short bullet from top context."""
-    try:
-        obj = json.loads(json_text)
-        if not isinstance(obj, dict):
-            return json_text
-        bullets = obj.get("bullets") or []
-        looks_refusal = any(_REFUSAL_PAT.search((b or "")) for b in bullets) if bullets else True
-        if (not bullets) or looks_refusal:
-            if contexts:
-                snip = _minify(contexts[0])[:160]
-                if snip:
-                    obj["bullets"] = [snip]
-                    obj["confidence"] = float(obj.get("confidence", 0.2))
-                    # keep evidence minimal but present
-                    obj["evidence"] = [{"quote": snip[:120]}]
-                    return json.dumps(obj, ensure_ascii=False)
-    except Exception:
-        pass
-    return json_text
+
 
 def render_template(jinja_text: str, **kw) -> str:
     env = Environment(loader=BaseLoader(), autoescape=False, trim_blocks=True, lstrip_blocks=True)
@@ -171,7 +152,34 @@ def main():
 
     # 6) Guarantee valid JSON, then guarantee non-empty bullets
     safe_text = _force_json(text)
-    safe_text = _guarantee_bullets(safe_text, contexts)
+    # Ensure non-empty, schema-aligned output (matches v1: evidence = [{doc_id, span}])
+    try:
+        obj = json.loads(safe_text)
+        if isinstance(obj, dict):
+            # bullets fallback
+            if not obj.get("bullets"):
+                snip = " ".join((contexts[0] or "").split())[:160] if contexts else ""
+                if snip:
+                    obj["bullets"] = [snip]
+
+            # evidence fallback: use top context as doc_id "1"
+            ev = obj.get("evidence")
+            needs_fix = (
+                    not isinstance(ev, list)
+                    or (len(ev) == 0)
+                    or any(not isinstance(e, dict) or "doc_id" not in e or "span" not in e for e in ev)
+            )
+            if needs_fix and contexts:
+                snip = " ".join((contexts[0] or "").split())[:120]
+                if snip:
+                    obj["evidence"] = [{"doc_id": "1", "span": snip}]
+
+            if "confidence" not in obj or obj["confidence"] is None:
+                obj["confidence"] = 0.2
+
+            safe_text = json.dumps(obj, ensure_ascii=False)
+    except Exception:
+        pass
 
     # 7) Emit
     out = {
