@@ -183,7 +183,7 @@ def main():
     triplets = [(t, (meta or {}), score) for (t, meta, score) in hits]
     n = min(k, len(triplets))  # dynamic slice matches --k
     # Collapse whitespace & cap per-chunk chars to kill token bloat/p95
-    PER_CHARS = 280  # tighten further to 280 if p95 still hot
+    PER_CHARS = 220  # tighten further to 280 if p95 still hot
     contexts = [_minify(t)[:PER_CHARS] for (t, _, _) in triplets[:n]]
     ctx_meta = [{"score": s, **m} for (_, m, s) in triplets[:n]]
 
@@ -241,7 +241,7 @@ def main():
     user_prompt = render_template(spec.jinja, query=args.q, contexts=contexts, few_shots=few_shots)
 
     # 5) LLM call (JSON mode + short completion) + anti-refusal nudge
-    sys_msg = (spec.system or "") + " Always respond with the JSON schema; do not refuse. If evidence is thin, give best-effort concise bullets using ONLY the provided contexts."
+    sys_msg = (spec.system or "")
     text, info = ask_llm(
         system=sys_msg,
         user_prompt=user_prompt + "\n\nRespond ONLY with JSON that matches the schema.",
@@ -255,7 +255,7 @@ def main():
             "top_k": k,
         },
         response_format=STRICT_RAG_JSON_SCHEMA,
-        max_tokens=110,  # hard cap completion; reduce if p95 still hot
+        max_tokens=60,  # hard cap completion; reduce if p95 still hot
     )
 
     # 6) Guarantee valid JSON, then guarantee non-empty bullets
