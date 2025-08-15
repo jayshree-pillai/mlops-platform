@@ -43,19 +43,21 @@ def main():
 
     # keep 1:1 mapping; minify whitespace only
     triplets = [(t, meta, score) for (t, meta, score) in hits]
+
     contexts = [_minify_text(t) for (t, _, _) in triplets]
     ctx_meta = [{"score": score, **(meta or {})} for (_, meta, score) in triplets]
 
-    # Retrieval quality signals
-    top_scores = [score for (_, _, score) in hits[:3]]
-    avg_top3 = sum(top_scores) / len(top_scores) if top_scores else 0.0
-    margin = top_scores[0] - top_scores[1] if len(top_scores) >= 2 else 0.0
+    # Retrieval quality signals (use triplets, not hits)
+    top_scores = [s for (_, _, s) in triplets[:3]]
+    avg_top3 = (sum(top_scores) / len(top_scores)) if top_scores else 0.0
+    margin = (top_scores[0] - top_scores[1]) if len(top_scores) >= 2 else 0.0
     low_confidence = (avg_top3 < args.min_avg_top3 and margin < args.min_margin)
 
     # Early refusal if nothing is usable
     min_keep = args.min_keep
     has_any_relevant = any(score >= min_keep for (_, _, score) in hits)
-    if not hits or (low_confidence and not has_any_relevant):
+    # Early refusal ONLY if there are truly no hits
+    if not triplets:
         refusal = {"bullets": [], "confidence": 0.0, "note": "No relevant information found"}
         out = {
             "answer": json.dumps(refusal, ensure_ascii=False),
