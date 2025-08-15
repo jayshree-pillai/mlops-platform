@@ -43,19 +43,17 @@ def main():
 
     # keep 1:1 mapping; minify whitespace only
     triplets = [(t, meta, score) for (t, meta, score) in hits]
-
-    contexts = [_minify_text(t) for (t, _, _) in triplets]
-    ctx_meta = [{"score": score, **(meta or {})} for (_, meta, score) in triplets]
+    n = min(k, len(triplets))
+    # contexts + metadata stay 1:1; collapse whitespace + HARD CAP length (keeps k=3)
+    contexts = [" ".join(t.split())[:340] for (t, _, _) in triplets[:n]]
+    ctx_meta = [{"score": s, **m} for (_, m, s) in triplets[:n]]
 
     # Retrieval quality signals (use triplets, not hits)
-    top_scores = [s for (_, _, s) in triplets[:3]]
+    top_scores = [s for (_, _, s) in triplets[:n]]
     avg_top3 = (sum(top_scores) / len(top_scores)) if top_scores else 0.0
     margin = (top_scores[0] - top_scores[1]) if len(top_scores) >= 2 else 0.0
     low_confidence = (avg_top3 < args.min_avg_top3 and margin < args.min_margin)
 
-    # Early refusal if nothing is usable
-    min_keep = args.min_keep
-    has_any_relevant = any(score >= min_keep for (_, _, score) in hits)
     # Early refusal ONLY if there are truly no hits
     if not triplets:
         refusal = {"bullets": [], "confidence": 0.0, "note": "No relevant information found"}
@@ -83,25 +81,41 @@ def main():
         print(json.dumps(out if args.json else out, ensure_ascii=False, indent=None if args.json else 2))
         return
 
-    # Token/latency clamps
-    def _truncate_contexts(texts: List[str], max_chars=500, max_ctx=3) -> List[str]:
+
+
+    def _slim_few_shots(few_shots):
         out = []
-        for t in texts[:max_ctx]:
-            out.append(t if len(t) <= max_chars else t[:max_chars])
+        for ex in (few_shots or [])[:1]:  # keep 1 example (v1 behavior preserved, budget-safe)
+            ex2 = dict(ex)
+            # collapse whitespace in query
+            ex2["query"] = " ".join((ex2.get("query", "") or "").split())
+            # keep only the first source, cap to 200 chars (content intact, just shorter)
+            srcs = []
+            for s in (ex2.get("sources", [])[:1]):
+                s2 = dict(s)
+                s2["text"] = " ".join((s2.get("text", "") or "").split())[:200]
+                srcs.append(s2)
+            ex2["sources"] = srcs
+            # keep expected JSON tiny but valid (schema-compliant)
+            j = ex2.get("json", {})
+            ex2["json"] = {"bullets": (j.get("bullets", [])[:2] or ["example"]),
+                           "confidence": float(j.get("confidence", 0.7))}
+            out.append(ex2)
         return out
-    contexts = _truncate_contexts(contexts, max_chars=700, max_ctx=3)
+
+    few_shots = _slim_few_shots(getattr(spec, "few_shots", []))
 
     # 3) Render prompt
     user_prompt = render_template(
         spec.jinja,
         query=args.q,
         contexts=contexts,
-        few_shots=getattr(spec, "few_shots", []),
+        few_shots=few_shots,
     )
 
     # 4) Call LLM with JSON mode enforced
     text, info = ask_llm(
-        system=(spec.system or ""),
+        system=(spec.system or "") + " Always respond with the JSON schema; do not refuse. If evidence is thin, give best-effort concise bullets using ONLY the provided contexts.",
         user_prompt=user_prompt + "\n\nRespond ONLY with JSON that matches the schema.",
         model=spec.model,
         temperature=0.0 if args.temp is None else args.temp,  # deterministic DEV
@@ -113,7 +127,7 @@ def main():
             "top_k": k,
         },
         response_format=STRICT_RAG_JSON_SCHEMA,
-        max_tokens=180,  # <-- new: keep completion tight; JSON is small anyway
+        max_tokens=120,  # <-- new: keep completion tight; JSON is small anyway
     )
 
     # 5) Guarantee valid JSON in output (salvage braces if needed)
