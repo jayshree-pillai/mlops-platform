@@ -45,7 +45,7 @@ def main():
     triplets = [(t, meta, score) for (t, meta, score) in hits]
     n = min(k, len(triplets))
     # contexts + metadata stay 1:1; collapse whitespace + HARD CAP length (keeps k=3)
-    contexts = [" ".join(t.split())[:340] for (t, _, _) in triplets[:n]]
+    contexts = [" ".join(t.split())[:320] for (t, _, _) in triplets[:n]]
     ctx_meta = [{"score": s, **m} for (_, m, s) in triplets[:n]]
 
     # Retrieval quality signals (use triplets, not hits)
@@ -127,7 +127,7 @@ def main():
             "top_k": k,
         },
         response_format=STRICT_RAG_JSON_SCHEMA,
-        max_tokens=120,  # <-- new: keep completion tight; JSON is small anyway
+        max_tokens=90,  # <-- new: keep completion tight; JSON is small anyway
     )
 
     # 5) Guarantee valid JSON in output (salvage braces if needed)
@@ -150,7 +150,21 @@ def main():
         return json.dumps({"bullets": [], "confidence": 0.0, "evidence": []}, ensure_ascii=False)
 
     safe_text = _force_json(text)
-
+    # Fallback: if bullets are empty but we do have contexts, synthesize 1 concise bullet.
+    try:
+        obj = json.loads(safe_text)
+        if isinstance(obj, dict):
+            bullets = obj.get("bullets", [])
+            if (not bullets) and contexts:
+                snip = " ".join((contexts[0] or "").split())[:160]
+                if snip:
+                    obj["bullets"] = [snip]
+                    if "confidence" not in obj or obj["confidence"] is None:
+                        obj["confidence"] = 0.2
+                    safe_text = json.dumps(obj, ensure_ascii=False)
+    except Exception:
+        # Keep original safe_text if anything goes weird
+        pass
     # 6) Emit result
     out = {
         "answer": safe_text,
