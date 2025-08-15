@@ -23,6 +23,7 @@ def ask_llm(
     temperature: Optional[float] = None,
     metadata: Optional[Dict[str, Any]] = None,
     response_format: Optional[Dict[str, Any]] = None,
+    max_tokens: Optional[int] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Returns (text, info) where info has usage + timings + model metadata.
@@ -41,6 +42,8 @@ def ask_llm(
     )
     if response_format is not None:
         kwargs["response_format"] = response_format  # JSON mode
+    if max_tokens is not None:  # <-- add this
+        kwargs["max_tokens"] = max_tokens
 
     resp = _client.chat.completions.create(**kwargs)
     dt = (time.time() - t0) * 1000.0

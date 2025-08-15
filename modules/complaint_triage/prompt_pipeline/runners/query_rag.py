@@ -10,6 +10,9 @@ from prompt_pipeline.utils.loader import get_retriever
 from prompt_pipeline.utils.openai_client import ask_llm
 from prompt_pipeline.utils.json_schemas import STRICT_RAG_JSON_SCHEMA
 
+def _minify_text(s: str) -> str:
+    # collapse all whitespace to single spaces; preserves content
+    return " ".join((s or "").split())
 def render_template(jinja_text: str, **kw) -> str:
     env = Environment(loader=BaseLoader(), autoescape=False, trim_blocks=True, lstrip_blocks=True)
     tmpl = env.from_string(jinja_text)
@@ -31,14 +34,17 @@ def main():
     # 1) Load prompt spec
     spec = load_prompt("rag", args.version) if args.version else load_active_prompt("rag")
 
-    # 2) Retrieve contexts
+    # 2) Retrieve contexts (keep alignment between contexts and ctx_meta)
     retriever = get_retriever()
     k = args.k or getattr(spec, "top_k", None) or 4
     hits = retriever.retrieve(args.q, k=k)
     if args.drop_top > 0:
         hits = hits[args.drop_top:]
-    contexts = [t for (t, meta, score) in hits]
-    ctx_meta = [{"score": score, **(meta or {})} for (t, meta, score) in hits]
+
+    # keep 1:1 mapping; minify whitespace only
+    triplets = [(t, meta, score) for (t, meta, score) in hits]
+    contexts = [_minify_text(t) for (t, _, _) in triplets]
+    ctx_meta = [{"score": score, **(meta or {})} for (_, meta, score) in triplets]
 
     # Retrieval quality signals
     top_scores = [score for (_, _, score) in hits[:3]]
@@ -105,6 +111,7 @@ def main():
             "top_k": k,
         },
         response_format=STRICT_RAG_JSON_SCHEMA,
+        max_tokens=180,  # <-- new: keep completion tight; JSON is small anyway
     )
 
     # 5) Guarantee valid JSON in output (salvage braces if needed)

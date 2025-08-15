@@ -2,8 +2,8 @@
 # tools/gen_dev_runs.py — Generate NDJSON runs from a query file using a chosen prompt version.
 # Works for DEV, VAL, or TEST; it's just a wrapper around runners/query_rag.py.
 # Example:
-#   python3 tools/gen_dev_runs.py --queries data/dev_s.jsonl --version summarize_v0 --k 4 --temp 0.0 --out runs/dev/dev_s_v0_k4_t00.ndjson
-#   python3 tools/gen_dev_runs.py --queries data/dev_s.jsonl --version summarize_v1_fewshot --k 4 --temp 0.0 --out runs/dev/dev_s_v1_k4_t00.ndjson
+# python3 tools/gen_dev_runs.py --queries data/dev_s.jsonl --version summarize_v0        --k 3 --temp 0.0 --out runs/dev/dev_s_v0_k3_t00.ndjson
+# python3 tools/gen_dev_runs.py --queries data/dev_s.jsonl --version summarize_v1_fewshot --k 3 --temp 0.0 --out runs/dev/dev_s_v1_k3_t00.ndjson
 import argparse, json, os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
