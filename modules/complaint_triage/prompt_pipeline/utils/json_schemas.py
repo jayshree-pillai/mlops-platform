@@ -10,6 +10,7 @@ STRICT_RAG_JSON_SCHEMA = {
                 "bullets": {
                     "type": "array",
                     "items": {"type": "string"},
+                    "minItems": 1,
                     "maxItems": 6
                 },
                 "evidence": {
@@ -19,10 +20,11 @@ STRICT_RAG_JSON_SCHEMA = {
                         "additionalProperties": False,
                         "required": ["doc_id", "span"],
                         "properties": {
-                            "doc_id": {"type": "string"},
+                            "doc_id": {"type": "integer"},     # <-- integer, not string
                             "span":   {"type": "string", "maxLength": 400}
                         }
                     },
+                    "minItems": 1,                           # <-- at least one item
                     "maxItems": 12
                 },
                 "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}

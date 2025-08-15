@@ -147,39 +147,42 @@ def main():
             "top_k": k,
         },
         response_format=STRICT_RAG_JSON_SCHEMA,
-        max_tokens=90,  # hard cap completion; reduce if p95 still hot
+        max_tokens=110,  # hard cap completion; reduce if p95 still hot
     )
 
     # 6) Guarantee valid JSON, then guarantee non-empty bullets
     safe_text = _force_json(text)
     # Ensure non-empty, schema-aligned output (matches v1: evidence = [{doc_id, span}])
+    # Ensure final JSON matches v1 schema strictly (doc_id int, non-empty bullets/evidence)
     try:
         obj = json.loads(safe_text)
-        if isinstance(obj, dict):
-            # bullets fallback
-            if not obj.get("bullets"):
-                snip = " ".join((contexts[0] or "").split())[:160] if contexts else ""
-                if snip:
-                    obj["bullets"] = [snip]
-
-            # evidence fallback: use top context as doc_id "1"
-            ev = obj.get("evidence")
-            needs_fix = (
-                    not isinstance(ev, list)
-                    or (len(ev) == 0)
-                    or any(not isinstance(e, dict) or "doc_id" not in e or "span" not in e for e in ev)
-            )
-            if needs_fix and contexts:
-                snip = " ".join((contexts[0] or "").split())[:120]
-                if snip:
-                    obj["evidence"] = [{"doc_id": "1", "span": snip}]
-
-            if "confidence" not in obj or obj["confidence"] is None:
-                obj["confidence"] = 0.2
-
-            safe_text = json.dumps(obj, ensure_ascii=False)
     except Exception:
-        pass
+        obj = {}
+
+    if not isinstance(obj, dict):
+        obj = {}
+
+    # bullets fallback: ensure non-empty
+    if not obj.get("bullets"):
+        snip_b = " ".join((contexts[0] or "").split())[:160] if contexts else "no content"
+        obj["bullets"] = [snip_b] if snip_b else ["no content"]
+
+    # evidence fallback: ensure non-empty and correct shape
+    ev = obj.get("evidence")
+
+    def _valid_ev_list(x):
+        return isinstance(x, list) and all(isinstance(e, dict) and "doc_id" in e and "span" in e for e in x)
+
+    if not _valid_ev_list(ev) or len(ev) == 0:
+        snip_e = " ".join((contexts[0] or "").split())[:120] if contexts else "no content"
+        obj["evidence"] = [{"doc_id": 1, "span": snip_e}]  # <-- integer doc_id=1 maps to first shown source
+
+    # confidence fallback
+    c = obj.get("confidence")
+    if not isinstance(c, (int, float)):
+        obj["confidence"] = 0.2
+
+    safe_text = json.dumps(obj, ensure_ascii=False)
 
     # 7) Emit
     out = {
