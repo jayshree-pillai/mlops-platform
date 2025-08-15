@@ -20,7 +20,7 @@ STRICT_RAG_JSON_SCHEMA = {
                         "additionalProperties": False,
                         "required": ["doc_id", "span"],
                         "properties": {
-                            "doc_id": {"type": "integer"},     # <-- integer, not string
+                            "doc_id": {"type": "string"},     # <-- integer, not string
                             "span":   {"type": "string", "maxLength": 400}
                         }
                     },

@@ -48,27 +48,28 @@ def _v1_valid(s: str, n_ctx: int) -> bool:
         return False
     if not isinstance(o, dict):
         return False
-    # bullets: non-empty list[str]
     bs = o.get("bullets")
     if not (isinstance(bs, list) and len(bs) >= 1 and all(isinstance(b, str) and b.strip() for b in bs)):
         return False
-    # evidence: non-empty list[{doc_id:int in 1..n_ctx, span:str}]
     ev = o.get("evidence")
     if not (isinstance(ev, list) and len(ev) >= 1):
         return False
     for e in ev:
-        if not (isinstance(e, dict) and isinstance(e.get("doc_id"), int) and 1 <= e["doc_id"] <= max(1, n_ctx)):
+        if not isinstance(e, dict): return False
+        did = e.get("doc_id")
+        if not isinstance(did, str): return False
+        try:
+            idx = int(did)
+        except Exception:
             return False
-        if not (isinstance(e.get("span"), str) and e["span"].strip()):
-            return False
-    # confidence: number in [0,1]
+        if not (1 <= idx <= max(1, n_ctx)): return False
+        if not (isinstance(e.get("span"), str) and e["span"].strip()): return False
     c = o.get("confidence")
-    if not (isinstance(c, (int, float)) and 0.0 <= float(c) <= 1.0):
-        return False
-    return True
+    return isinstance(c, (int, float)) and 0.0 <= float(c) <= 1.0
+
 
 def _coerce_v1_json(safe_text: str, contexts: list[str]) -> str:
-    """Preserve model intent; fix types/empties to match v1 contract."""
+    """Preserve model intent; fix types/empties to match v1 contract (doc_id as string)."""
     try:
         obj = json.loads(safe_text)
     except Exception:
@@ -77,6 +78,7 @@ def _coerce_v1_json(safe_text: str, contexts: list[str]) -> str:
         obj = {}
 
     n = max(1, len(contexts))
+
     def _snip(i: int, L: int) -> str:
         i = max(0, min(i, n-1))
         return " ".join((contexts[i] or "").split())[:L] or "no content"
@@ -86,31 +88,36 @@ def _coerce_v1_json(safe_text: str, contexts: list[str]) -> str:
     if not isinstance(bs, list):
         bs = []
     bs = [str(b)[:200] for b in bs if isinstance(b, (str, int, float)) and str(b).strip()]
-    if not bs:
-        bs = [_snip(0, 160)]
+    if len(bs) < 3:
+        # pad up to 3 bullets from top contexts (v1 spec says 3–6)
+        while len(bs) < 3:
+            bs.append(_snip(len(bs) % n, 160))
     obj["bullets"] = bs[:6]
 
-    # evidence
+    # evidence: list of {doc_id:str, span:str}, non-empty
     ev = obj.get("evidence")
     out_ev = []
     if isinstance(ev, list):
         for e in ev:
-            if isinstance(e, dict):
-                # coerce doc_id→int in 1..n
-                did = e.get("doc_id")
-                try:
-                    did = int(did)
-                except Exception:
-                    did = None
-                span = e.get("span")
-                span = str(span) if isinstance(span, (str, int, float)) else None
-                if did is not None and 1 <= did <= n and span:
-                    ref = contexts[did-1]
-                    if span not in ref:
-                        span = _snip(did-1, 120)
-                    out_ev.append({"doc_id": did, "span": span})
+            if not isinstance(e, dict):
+                continue
+            did = e.get("doc_id")
+            # always coerce to string id (e.g., "1", "2")
+            did = str(did) if did is not None else None
+            span = e.get("span")
+            span = str(span) if isinstance(span, (str, int, float)) else None
+            # map numeric-like strings to 1..n bounds
+            try:
+                idx = int(did)
+            except Exception:
+                idx = None
+            if did and span and (idx is not None) and (1 <= idx <= n):
+                ref = contexts[idx-1]
+                if span not in ref:
+                    span = _snip(idx-1, 120)
+                out_ev.append({"doc_id": str(idx), "span": span})
     if not out_ev:
-        out_ev = [{"doc_id": 1, "span": _snip(0, 120)}]
+        out_ev = [{"doc_id": "1", "span": _snip(0, 120)}]
     obj["evidence"] = out_ev[:12]
 
     # confidence
@@ -124,8 +131,9 @@ def _coerce_v1_json(safe_text: str, contexts: list[str]) -> str:
     obj = {"bullets": obj["bullets"], "evidence": obj["evidence"], "confidence": obj["confidence"]}
     return json.dumps(obj, ensure_ascii=False)
 
+
 def _force_v1_contract(contexts: list[str], bullets_count: int = 3) -> str:
-    """Ignore model output; emit guaranteed-valid v1 object."""
+    """Ignore model output; emit guaranteed-valid v1 object with string doc_id."""
     n = max(1, len(contexts))
     def _snip(i: int, L: int):
         i = max(0, min(i, n-1))
@@ -135,7 +143,7 @@ def _force_v1_contract(contexts: list[str], bullets_count: int = 3) -> str:
     for i in range(bullets_count):
         idx = (i % n)
         bullets.append(_snip(idx, 160))
-        evidence.append({"doc_id": idx+1, "span": _snip(idx, 120)})
+        evidence.append({"doc_id": str(idx+1), "span": _snip(idx, 120)})
     return json.dumps({"bullets": bullets, "evidence": evidence, "confidence": 0.6}, ensure_ascii=False)
 
 
