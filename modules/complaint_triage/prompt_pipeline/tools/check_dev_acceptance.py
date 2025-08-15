@@ -17,6 +17,11 @@ def parse_args():
     ap.add_argument("--max-p95", type=float, default=3000.0)
     ap.add_argument("--max-avg-tokens", type=float, default=800.0)
     return ap.parse_args()
+def coerce(ans):
+    if isinstance(ans,str):
+        try: ans=json.loads(ans)
+        except: return {}
+    return ans if isinstance(ans,dict) else {}
 
 def is_valid_answer(ans):
     b = ans.get("bullets"); e = ans.get("evidence"); c = ans.get("confidence")
@@ -62,7 +67,7 @@ def main():
                 obj = json.loads(ln)
             except json.JSONDecodeError:
                 continue
-            ans = obj.get("answer", {})
+            ans = coerce(obj.get("answer", {}))
             if is_valid_answer(ans):
                 valids += 1
                 if is_refusal(ans):

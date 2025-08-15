@@ -30,7 +30,7 @@ def load_queries(path: Path):
 
 def run_one(query: str, version: str, k: int, temp: float, drop_top: int, runner: Path, env: dict,
             retries: int = 2, backoff: float = 1.7):
-    cmd = ["python3", str(runner), "-q", query, "--version", version, "--k", str(k), "--temp", str(temp), "--json"]
+    cmd = ["python3", str(runner), "--q", query, "--version", version, "--k", str(k), "--temp", str(temp), "--json"]
     if drop_top and drop_top > 0:
         cmd.extend(["--drop-top", str(drop_top)])
     for attempt in range(retries + 1):
