@@ -92,7 +92,6 @@ def main():
     if rows:
         # try to read lineage from any NDJSON line that has it
         try:
-            import json
             sample = json.loads(open(args.ndjson, "r", encoding="utf-8").readline())
             gen_model = (sample.get("lineage") or {}).get("gen_model")
         except:
