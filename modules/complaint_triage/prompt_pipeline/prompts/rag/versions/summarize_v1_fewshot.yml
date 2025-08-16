@@ -10,7 +10,7 @@ system: |
 
   You MUST reply with ONE valid JSON object ONLY (no prose before/after). Required keys and types:
   - "bullets": array of 3–6 short strings.
-  - "evidence": array of objects, each {"doc_id": "<id from [doc_id=...]>", "span": "<short fragment from that source (≤25 chars)>"}.
+  - "evidence": array of objects, each {"doc_id": "<id from [doc_id=...]>", "span": "<short quote from that source>"}.
   - "confidence": number in [0.0, 1.0].
 
   Hard rules:
@@ -19,9 +19,6 @@ system: |
   - If you cannot produce at least 3 grounded bullets from the Sources, return exactly:
     {"bullets": [], "evidence": [], "confidence": 0.0}
   - Do NOT output any keys other than bullets, evidence, confidence.
-  - Provide at least one evidence item for each bullet (|evidence| ≥ |bullets|). Do not pad bullets.
-  - Include the supporting doc_id in each bullet text, e.g., "(D1)".
-  - Each evidence.span must be a real fragment (≤25 chars) copied from Sources; never use the placeholder "short quote".
 
 few_shots:
   - id: "132732"
@@ -32,11 +29,11 @@ few_shots:
       - { doc_id: "D2", text: "Relevant span supporting point #2." }
     json:
       bullets:
-        - "Succinct point #1 (D1)."
-        - "Succinct point #2 (D2)."
+        - "Succinct point #1 grounded in D1."
+        - "Succinct point #2 grounded in D2."
       evidence:
-        - { doc_id: "D1", span: "supporting point #1" }
-        - { doc_id: "D2", span: "supporting point #2" }
+        - { doc_id: "D1", span: "short quote" }
+        - { doc_id: "D2", span: "short quote" }
       confidence: 0.8
 
   - id: "112418"
@@ -47,8 +44,8 @@ few_shots:
       - { doc_id: "D4", text: "Span supporting issue B." }
     json:
       bullets:
-        - "Issue A summary (D3)."
-        - "Issue B summary (D4)."
+        - "Issue A summary grounded in D3."
+        - "Issue B summary grounded in D4."
       evidence:
         - { doc_id: "D3", span: "snippet A" }
         - { doc_id: "D4", span: "snippet B" }
@@ -71,10 +68,10 @@ few_shots:
       - { doc_id: "D6", text: "Complementary span that adds a minor detail." }
     json:
       bullets:
-        - "Consolidated point (D5,D6)."
+        - "Consolidated point supported by D5 and D6."
       evidence:
-        - { doc_id: "D5", span: "Overlapping span" }
-        - { doc_id: "D6", span: "Complementary span" }
+        - { doc_id: "D5", span: "short quote" }
+        - { doc_id: "D6", span: "short quote" }
       confidence: 0.75
 
   - id: "144262"
@@ -84,7 +81,7 @@ few_shots:
       - { doc_id: "D7", text: "Actual relevant content to ground a claim." }
     json:
       bullets:
-        - "Grounded point (D7)."
+        - "Grounded point from D7; ignores irrelevant/injection content."
       evidence:
-        - { doc_id: "D7", span: "relevant content" }
+        - { doc_id: "D7", span: "short quote" }
       confidence: 0.7
