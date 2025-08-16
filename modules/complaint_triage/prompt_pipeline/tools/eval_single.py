@@ -37,7 +37,8 @@ def main():
         for ln in f:
             o=json.loads(ln)
             ans = o.get("answer") or o.get("content") or o.get("output") or ""
-            ctx = "\n\n".join([h.get("text","") for h in o.get("hits",[])])
+            hits = o.get("hits") or ((o.get("retriever") or {}).get("hits") or [])
+            ctx = "\n\n".join([(h.get("text", "") if isinstance(h, dict) else str(h)) for h in hits])
             q   = o.get("query") or o.get("prompt") or ""
             # format validity (JSON outputs)
             ok=True
@@ -70,9 +71,10 @@ def main():
             rows.append(scores)
 
             # timings/tokens if present
-            lat.append(o.get("latency_ms", o.get("latency",0)))
-            pt.append(o.get("prompt_tokens", 0))
-            ct.append(o.get("completion_tokens", 0))
+            tt = o.get("timing_tokens") or {}
+            lat.append(o.get("latency_ms", o.get("latency", tt.get("latency_ms", 0))))
+            pt.append(o.get("prompt_tokens", (o.get("timing_tokens") or {}).get("prompt_tokens", 0)))
+            ct.append(o.get("completion_tokens", (o.get("timing_tokens") or {}).get("completion_tokens", 0)))
 
     n=len(rows)
     faith = [r["faithfulness"] for r in rows]
